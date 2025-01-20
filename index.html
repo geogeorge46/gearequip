@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GEAR EQUIP - Machinery Rental Platform</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="./styles.css" rel="stylesheet">
+    <link href="video1style.css" rel="stylesheet">
+    <link href="video2style.css" rel="stylesheet"> 
+    
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Add new style tag -->
+    <style>
+        .section-title-large {
+            font-size: 3.5rem !important;
+            font-weight: 800 !important;
+            text-align: center !important;
+            color: #2c3e50 !important;
+            margin-bottom: 3rem !important;
+            text-transform: uppercase !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header/Navigation -->
+    <nav class="navbar">
+        <div class="nav-content">
+            <a href="/" class="logo">
+                <img src="images/logo.png" alt="GEAR EQUIP">
+            </a>
+            <div class="nav-links">
+                <a href="#home">Home</a>
+                <a href="#categories">Categories</a>
+                <a href="#machines">Machines</a>
+                <a href="#about">About</a>
+                <a href="#contact">Contact</a>
+            </div>
+            <div class="auth-buttons" style="display: flex; gap: 12px;">
+                <a href="login.php" class="login-btn" style="padding: 10px 24px; 
+                    background: linear-gradient(145deg, #27ae60, #219a52); 
+                    color: white; 
+                    border: none; 
+                    border-radius: 25px; 
+                    font-size: 14px; 
+                    font-weight: 600; 
+                    cursor: pointer; 
+                    transition: all 0.3s ease;
+                    box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
+                    text-decoration: none;
+                    display: inline-block;">
+                    Login
+                </a>
+                <a href="register.php" class="register-btn" style="padding: 10px 24px; 
+                    background: linear-gradient(145deg, #2196f3, #1e88e5); 
+                    color: white; 
+                    border: none; 
+                    border-radius: 25px; 
+                    font-size: 14px; 
+                    font-weight: 500; 
+                    cursor: pointer; 
+                    transition: all 0.3s ease;
+                    box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+                    text-decoration: none;
+                    display: inline-block;">
+                    Register
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section with Video Background -->
+    <section class="hero" id="home">
+        <div class="video-container">
+            <video autoplay loop muted playsinline id="myVideo">
+                <source src="images/bgfront.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+            <div class="overlay"></div>
+        </div>
+        <div class="hero-content">
+            <h1>Find the Perfect Equipment for Your Project</h1>
+            <!-- Simplified Search Box without Location -->
+            <div style="width: 70%; max-width: 800px; margin: 25px auto; padding: 20px; background: linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.85)); border-radius: 15px; box-shadow: 0 6px 25px rgba(0,0,0,0.2); backdrop-filter: blur(8px);">
+                <div style="display: flex; gap: 12px; padding: 3px;">
+                    <div style="flex: 1; position: relative;">
+                        <input type="text" placeholder="Search for machinery..." 
+                            style="width: 100%; padding: 14px 20px; background: rgba(255,255,255,0.9); 
+                            border: 2px solid #e1e1e1; border-radius: 10px; font-size: 14px; 
+                            transition: all 0.3s ease; box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);">
+                    </div>
+                    <button style="padding: 14px 30px; background: linear-gradient(145deg, #1a5f89, #134b6d); 
+                        color: white; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; 
+                        cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(19,75,109,0.3);">
+                        Search
+                    </button>
+                </div>
+            </div>
+            <p class="hero-text">Rent construction, agricultural, and industrial equipment with ease</p>
+        </div>
+    </section>
+
+    <!-- Top Machines Section -->
+    <section class="top-machines" id="machines">
+        <h2 class="text-4xl font-extrabold text-center text-[#2c3e50] mb-12 uppercase tracking-wide">Top Machines on Rent</h2>
+        <div class="machine-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 px-4 max-w-7xl mx-auto">
+            <div class="machine-card bg-white rounded-lg overflow-hidden shadow-lg transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
+                <span class="badge absolute top-4 right-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-semibold">Popular</span>
+                <img src="./images/excavator.jpg" alt="Excavator" class="w-full h-48 object-cover">
+                <div class="p-6">
+                    <h3 class="text-2xl font-bold text-[#2c3e50] mb-3">CAT Excavator 320</h3>
+                    <div class="text-yellow-500 text-lg mb-2">★★★★★ <span class="text-gray-600 text-sm">(4.9)</span></div>
+                    <p class="text-xl font-bold text-green-600 mb-4">₹15,000/day</p>
+                    <button class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg transition duration-300">Rent Now</button>
+                </div>
+            </div>
+
+            <div class="machine-card bg-white rounded-lg overflow-hidden shadow-lg transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
+                <span class="badge absolute top-4 right-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-semibold">Popular</span>
+                <img src="./images/truck.jpg" alt="Truck" class="w-full h-48 object-cover">
+                <div class="p-6">
+                    <h3 class="text-2xl font-bold text-[#2c3e50] mb-3">Heavy Duty Truck</h3>
+                    <div class="text-yellow-500 text-lg mb-2">★★★★☆ <span class="text-gray-600 text-sm">(4.5)</span></div>
+                    <p class="text-xl font-bold text-green-600 mb-4">₹12,000/day</p>
+                    <button class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg transition duration-300">Rent Now</button>
+                </div>
+            </div>
+
+            <div class="machine-card bg-white rounded-lg overflow-hidden shadow-lg transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
+                <span class="badge absolute top-4 right-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-semibold">Popular</span>
+                <img src="./images/crane.jpg" alt="Crane" class="w-full h-48 object-cover">
+                <div class="p-6">
+                    <h3 class="text-2xl font-bold text-[#2c3e50] mb-3">Mobile Crane 50T</h3>
+                    <div class="text-yellow-500 text-lg mb-2">★★★★★ <span class="text-gray-600 text-sm">(4.8)</span></div>
+                    <p class="text-xl font-bold text-green-600 mb-4">₹20,000/day</p>
+                    <button class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg transition duration-300">Rent Now</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Categories Section -->
+    <section class="categories" id="categories">
+        <h2 class="text-4xl font-extrabold text-center text-[#2c3e50] mb-12 uppercase tracking-wide">Browse by Category</h2>
+        <div class="category-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 px-4 max-w-7xl mx-auto">
+            <div class="category-card transform transition-all duration-300 hover:scale-105 hover:shadow-xl bg-white rounded-lg overflow-hidden">
+                <img src="./images/agricultural.jpg" alt="Agricultural Equipment" class="w-full h-48 object-cover">
+                <div class="p-6">
+                    <h3 class="text-xl font-bold text-[#2c3e50] mb-2">Agricultural</h3>
+                    <p class="text-gray-600">Tractors, Harvesters, etc.</p>
+                </div>
+            </div>
+
+            <div class="category-card transform transition-all duration-300 hover:scale-105 hover:shadow-xl bg-white rounded-lg overflow-hidden">
+                <img src="./images/commercial.jpg" alt="Commercial Equipment" class="w-full h-48 object-cover">
+                <div class="p-6">
+                    <h3 class="text-xl font-bold text-[#2c3e50] mb-2">Commercial</h3>
+                    <p class="text-gray-600">Cranes, Forklifts, etc.</p>
+                </div>
+            </div>
+
+            <div class="category-card transform transition-all duration-300 hover:scale-105 hover:shadow-xl bg-white rounded-lg overflow-hidden">
+                <img src="./images/manufacturing.jpg" alt="Manufacturing Equipment" class="w-full h-48 object-cover">
+                <div class="p-6">
+                    <h3 class="text-xl font-bold text-[#2c3e50] mb-2">Manufacturing</h3>
+                    <p class="text-gray-600">Chainsaw, Trillers etc.</p>
+                </div>
+            </div>
+
+            <div class="category-card transform transition-all duration-300 hover:scale-105 hover:shadow-xl bg-white rounded-lg overflow-hidden">
+                <img src="./images/household.jpg" alt="Household Equipment" class="w-full h-48 object-cover">
+                <div class="p-6">
+                    <h3 class="text-xl font-bold text-[#2c3e50] mb-2">Household</h3>
+                    <p class="text-gray-600">Power Tools, Axe etc.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="how-it-works">
+        <!-- Add video background -->
+        <div class="video-background">
+            <video autoplay muted loop playsinline id="howitworksVideo">
+                <source src="./images/bghowitworks.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+            <div class="overlay"></div>
+        </div>
+
+        <h2>How It Works</h2>
+        <div class="steps">
+            <div class="step-card">
+                <div class="step-number">1</div>
+                <h3>Search & Select</h3>
+                <p>Browse our collection and choose what you need</p>
+            </div>
+            <div class="step-card">
+                <div class="step-number">2</div>
+                <h3>Login/Register</h3>
+                <p>Create an account or login to proceed</p>
+            </div>
+            <div class="step-card">
+                <div class="step-number">3</div>
+                <h3>Make Payment</h3>
+                <p>Secure payment with refundable deposit</p>
+            </div>
+            <div class="step-card">
+                <div class="step-number">4</div>
+                <h3>Receive & Return</h3>
+                <p>Get delivery and return after use</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section class="testimonials">
+        <h2 class="text-4xl font-extrabold text-center text-[#2c3e50] mb-12 uppercase tracking-wide">What Our Customers Say</h2>
+        <div class="testimonial-grid">
+            <div class="testimonial-card">
+                <div class="quote">★★★★★</div>
+                <p>"Excellent service and quality machinery. The rental process was smooth and hassle-free."</p>
+                <div class="author">- Rajesh Kumar, Construction Manager</div>
+            </div>
+            <div class="testimonial-card">
+                <div class="quote">★★★★★</div>
+                <p>"GEAR EQUIP helped us meet our tight project deadlines by providing reliable equipment on time."</p>
+                <div class="author">- Priya Sharma, Project Director</div>
+            </div>
+            <div class="testimonial-card">
+                <div class="quote">★★★★½</div>
+                <p>"Great selection of agricultural machinery. The customer support team was very helpful throughout."</p>
+                <div class="author">- Amit Patel, Farm Owner</div>
+            </div>
+            <div class="testimonial-card">
+                <div class="quote">★★★★★</div>
+                <p>"The quality of equipment and maintenance standards are exceptional. Will definitely use again!"</p>
+                <div class="author">- Sarah Khan, Site Engineer</div>
+            </div>
+            <div class="testimonial-card">
+                <div class="quote">★★★★★</div>
+                <p>"Their excavator rental service saved us significant upfront costs. The machines were well-maintained and performed flawlessly."</p>
+                <div class="author">- Vikram Singh, Infrastructure Developer</div>
+            </div>
+            <div class="testimonial-card">
+                <div class="quote">★★★★★</div>
+                <p>"As a small business owner, finding reliable machinery was always a challenge until I discovered GEAR EQUIP. Their service is unmatched!"</p>
+                <div class="author">- Meera Desai, Business Owner</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>Contact Us</h3>
+                <p>Email: info@gearequip.com</p>
+                <p>Phone: +91 1234567890</p>
+                <p>Address: 123 Business Park, Mumbai, India</p>
+            </div>
+            <div class="footer-section">
+                <h3>Quick Links</h3>
+                <a href="#about">About Us</a>
+                <a href="#terms">Terms & Conditions</a>
+                <a href="#privacy">Privacy Policy</a>
+            </div>
+            <div class="footer-section">
+                <h3>Follow Us</h3>
+                <div class="social-links">
+                    <a href="#">Facebook</a>
+                    <a href="#">Twitter</a>
+                    <a href="#">LinkedIn</a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2024 GEAR EQUIP. All rights reserved.</p>
+        </div>
+    </footer>
+</body>
+</html>
