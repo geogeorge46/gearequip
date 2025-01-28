@@ -1,47 +1,41 @@
 <?php
-session_start();
-require_once 'config.php';
+// Database connection
+$host = 'localhost';
+$dbname = 'GearEquip';
+$username = 'root';
+$password = '';
 
-$registration_success = '';
-$registration_error = '';
+$conn = mysqli_connect($host, $username, $password, $dbname);
 
+// Check connection
+if (!$conn) {
+    die("Connection failed: " . mysqli_connect_error());
+}
+
+// Process form submission
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $fullName = trim($_POST['fullName']);
-    $email = trim($_POST['email']);
-    $phone = trim($_POST['phone']);
-    $password = $_POST['password'];
-    $confirmPassword = $_POST['confirmPassword'];
+    $fullName = mysqli_real_escape_string($conn, $_POST['fullName']);
+    $email = mysqli_real_escape_string($conn, $_POST['email']);
+    $phone = mysqli_real_escape_string($conn, $_POST['phone']);
+    $password = password_hash($_POST['password'], PASSWORD_DEFAULT); // Hash the password
 
-    // Validate input
-    if (empty($fullName) || empty($email) || empty($phone) || empty($password)) {
-        $registration_error = "All fields are required";
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $registration_error = "Invalid email format";
-    } elseif ($password !== $confirmPassword) {
-        $registration_error = "Passwords do not match";
+    // Check if email already exists
+    $check_email = "SELECT * FROM users WHERE email = '$email'";
+    $result = mysqli_query($conn, $check_email);
+    
+    if (mysqli_num_rows($result) > 0) {
+        echo "<script>alert('Email already exists!');</script>";
     } else {
-        // Check if email already exists
-        $stmt = $conn->prepare("SELECT id FROM users WHERE email = ?");
-        $stmt->execute([$email]);
-        
-        if ($stmt->rowCount() > 0) {
-            $registration_error = "Email already exists";
+        // Insert new user
+        $sql = "INSERT INTO users (full_name, email, phone, password) 
+                VALUES ('$fullName', '$email', '$phone', '$password')";
+                
+        if (mysqli_query($conn, $sql)) {
+            // Redirect to login page after successful registration
+            header("Location: login.php");
+            exit();
         } else {
-            // Hash password
-            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-            
-            try {
-                // Insert new user
-                $stmt = $conn->prepare("INSERT INTO users (full_name, email, phone, password) VALUES (?, ?, ?, ?)");
-                $stmt->execute([$fullName, $email, $phone, $hashed_password]);
-                
-                $registration_success = "Registration successful! Please login.";
-                
-                // Redirect to login page after 2 seconds
-                header("refresh:2;url=login.php");
-            } catch(PDOException $e) {
-                $registration_error = "Registration failed: " . $e->getMessage();
-            }
+            echo "Error: " . $sql . "<br>" . mysqli_error($conn);
         }
     }
 }
@@ -142,7 +136,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         .form-group input:focus {
             border-color: #2196f3;
             box-shadow: 0 0 0 2px rgba(33,150,243,0.1);
-            outline: none;
+            outline: none;s
         }
 
         .error-message {
@@ -214,6 +208,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         .trust-badges > div:hover {
             transform: translateY(-5px);
+        }
+
+        /* Hide the number input spinner */
+        input[type="number"] {
+            -moz-appearance: textfield; /* Firefox */
+        }
+
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none; /* Chrome, Safari, Edge */
+            margin: 0;
         }
     </style>
 </head>
@@ -290,7 +295,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 </div>
                 <div class="form-group">
                     <label for="phone">Phone Number</label>
-                    <input type="tel" id="phone" name="phone" value="<?php echo isset($_POST['phone']) ? htmlspecialchars($_POST['phone']) : ''; ?>" required>
+                    <input type="number" id="phone" name="phone" value="<?php echo isset($_POST['phone']) ? htmlspecialchars($_POST['phone']) : ''; ?>" required>
                 </div>
                 <div class="form-group">
                     <label for="password">Password</label>
@@ -300,9 +305,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     <label for="confirmPassword">Confirm Password</label>
                     <input type="password" id="confirmPassword" name="confirmPassword" required>
                 </div>
+                <div id="nameError" class="error-message">Invalid name format</div>
+                <div id="emailError" class="error-message">Invalid email format</div>
+                <div id="phoneError" class="error-message">Invalid phone number</div>
+                <div id="passwordError" class="error-message">Password must be at least 8 characters</div>
+                <div id="confirmError" class="error-message">Passwords do not match</div>
                 <button type="submit" class="register-btn">Create Account</button>
                 <div class="login-link">
-                    Already have an account? <a href="login.html">Login here</a>
+                    Already have an account? <a href="login.php">Login here</a>
                 </div>
             </form>
         </div>
@@ -310,62 +320,74 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     <script>
         function validateForm(event) {
-            event.preventDefault();
             let isValid = true;
 
             // Full Name validation
             const fullName = document.getElementById('fullName').value;
+            const nameError = document.getElementById('nameError');
             if(!/^[a-zA-Z\s]{2,50}$/.test(fullName)) {
-                document.getElementById('nameError').style.display = 'block';
+                nameError.style.display = 'block';
                 isValid = false;
             } else {
-                document.getElementById('nameError').style.display = 'none';
+                nameError.style.display = 'none';
             }
 
             // Email validation
             const email = document.getElementById('email').value;
+            const emailError = document.getElementById('emailError');
             if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-                document.getElementById('emailError').style.display = 'block';
+                emailError.style.display = 'block';
                 isValid = false;
             } else {
-                document.getElementById('emailError').style.display = 'none';
+                emailError.style.display = 'none';
             }
 
             // Phone validation
             const phone = document.getElementById('phone').value;
+            const phoneError = document.getElementById('phoneError');
             if(!/^\d{10}$/.test(phone)) {
-                document.getElementById('phoneError').style.display = 'block';
+                phoneError.style.display = 'block';
                 isValid = false;
             } else {
-                document.getElementById('phoneError').style.display = 'none';
+                phoneError.style.display = 'none';
             }
 
             // Password validation
             const password = document.getElementById('password').value;
+            const passwordError = document.getElementById('passwordError');
             if(password.length < 8) {
-                document.getElementById('passwordError').style.display = 'block';
+                passwordError.style.display = 'block';
                 isValid = false;
             } else {
-                document.getElementById('passwordError').style.display = 'none';
+                passwordError.style.display = 'none';
             }
 
             // Confirm Password validation
             const confirmPassword = document.getElementById('confirmPassword').value;
+            const confirmError = document.getElementById('confirmError');
             if(password !== confirmPassword) {
-                document.getElementById('confirmError').style.display = 'block';
+                confirmError.style.display = 'block';
                 isValid = false;
             } else {
-                document.getElementById('confirmError').style.display = 'none';
+                confirmError.style.display = 'none';
             }
 
-            if(isValid) {
-                // Form is valid, you can submit it
-                alert('Registration successful!');
-                // Add your form submission code here
+            if(!isValid) {
+                event.preventDefault(); // Only prevent form submission if validation fails
             }
+            // If valid, form will submit naturally
 
             return isValid;
         }
+
+        // Live validation
+        const inputs = ['fullName', 'email', 'phone', 'password', 'confirmPassword'];
+        inputs.forEach(inputId => {
+            document.getElementById(inputId).addEventListener('input', validateForm);
+        });
+
+        // Form submission validation
+        document.getElementById('registrationForm').addEventListener('submit', validateForm);
     </script>
 </body>
 </html>

@@ -250,15 +250,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     <input type="password" id="password" name="password" required>
                 </div>
                 <div class="remember-forgot">
-                    <label class="remember-me">
-                        <input type="checkbox" name="remember">
-                        <span>Remember me</span>
-                    </label>
+                    
                     <a href="#" class="forgot-password">Forgot Password?</a>
                 </div>
                 <button type="submit" class="login-btn">Login</button>
                 <div class="register-link">
-                    Don't have an account? <a href="register.html">Register here</a>
+                    Don't have an account? <a href="register.php">Register here</a>
                 </div>
             </form>
         </div>
