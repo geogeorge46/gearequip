@@ -8,32 +8,34 @@ require_once 'config.php';
 $login_error = '';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $email = trim($_POST['email']);
+    $email = mysqli_real_escape_string($conn, trim($_POST['email']));
     $password = $_POST['password'];
     
-    try {
-        if (empty($email) || empty($password)) {
-            $login_error = "Please fill in all fields";
-        } else {
-            $stmt = $conn->prepare("SELECT * FROM users WHERE email = ?");
-            $stmt->execute([$email]);
-            $user = $stmt->fetch();
-            
-            if ($user && password_verify($password, $user['password'])) {
-                $_SESSION['user_id'] = $user['id'];
-                $_SESSION['user_name'] = $user['full_name'];
+    if (empty($email) || empty($password)) {
+        $login_error = "Please fill in all fields";
+    } else {
+        // Using mysqli prepared statement
+        $stmt = mysqli_prepare($conn, "SELECT * FROM users WHERE email = ?");
+        mysqli_stmt_bind_param($stmt, "s", $email);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+        
+        if ($row = mysqli_fetch_assoc($result)) {
+            if (password_verify($password, $row['password'])) {
+                $_SESSION['user_id'] = $row['user_id'];
+                $_SESSION['full_name'] = $row['full_name'];
                 
-                // Debug message
-                echo "Login successful! Redirecting...";
-                
+                // Redirect to index.php
                 header("Location: index.php");
                 exit();
             } else {
                 $login_error = "Invalid email or password";
             }
+        } else {
+            $login_error = "Invalid email or password";
         }
-    } catch(PDOException $e) {
-        $login_error = "Login error: " . $e->getMessage();
+        
+        mysqli_stmt_close($stmt);
     }
 }
 ?>
