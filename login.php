@@ -28,6 +28,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 
                 // Redirect based on user role
                 switch($row['role']) {
+                    case 'admin':
+                        header("Location: admin_dashboard.php");
+                        break;
                     case 'manager':
                         header("Location: manager_dashboard.php");
                         break;
@@ -139,6 +142,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             font-weight: 600;
             cursor: pointer;
             transition: background 0.3s;
+            margin-bottom: 15px;
         }
 
         .login-btn:hover {
@@ -152,6 +156,30 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             background: #fdf0ef;
             border-radius: 5px;
             text-align: center;
+        }
+
+        .forgot-password {
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .forgot-password a {
+            color: #4a90e2;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+
+        .forgot-password a:hover {
+            color: #357abd;
+            text-decoration: underline;
+        }
+
+        .sign-up-link {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
         }
 
         @media (max-width: 768px) {
@@ -182,13 +210,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <form method="POST" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
                 <div class="form-group">
                     <label for="email">Email Address</label>
-                    <input type="email" id="email" name="email" value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>" required>
+                    <input type="email" id="email" name="email" required>
                 </div>
                 <div class="form-group">
                     <label for="password">Password</label>
                     <input type="password" id="password" name="password" required>
                 </div>
                 <button type="submit" class="login-btn">Login</button>
+                <div class="forgot-password">
+                    <a href="forgot_password.php">Forgot Password?</a>
+                </div>
+                <div class="sign-up-link" style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
+                    <span style="color: #666;">Don't have an account? </span>
+                    <a href="register.php" style="color: #4a90e2; text-decoration: none; font-weight: 600;">Sign up</a>
+                </div>
             </form>
         </div>
     </div>

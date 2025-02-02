@@ -23,7 +23,21 @@ $categories = $conn->query($categories_query);
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-50">
-    <?php include 'nav.php'; ?>
+<header class="bg-white shadow-md fixed top-0 left-0 right-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-3">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <img src="images/logo.png" alt="GEAR EQUIP Logo" class="h-10">
+                <span class="text-xl font-bold text-gray-800">GEAR EQUIP</span>
+            </div>
+            <div class="flex items-center space-x-4">
+                <span class="text-gray-600">Welcome, <?php echo htmlspecialchars($_SESSION['full_name']); ?></span>
+                <a href="logout.php" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">Logout</a>
+            </div>
+        </div>
+    </div>
+</header>
+    
 
     <div class="max-w-7xl mx-auto px-4 py-16 mt-20">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

@@ -147,6 +147,22 @@ if ($conn->query($sql_reviews) === TRUE) {
     echo "Error creating reviews table: " . $conn->error . "<br>";
 }
 
+// Create password reset tokens table
+$sql_reset_tokens = "CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    token_id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    token VARCHAR(255) NOT NULL,
+    expiry TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+)";
+
+if ($conn->query($sql_reset_tokens) === TRUE) {
+    echo "Password reset tokens table created successfully<br>";
+} else {
+    echo "Error creating password reset tokens table: " . $conn->error . "<br>";
+}
+
 $conn->close();
 echo "<br>Database setup completed!";
 ?>
