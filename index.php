@@ -4,6 +4,9 @@ include 'config.php';
 
 // Start the session for user management
 session_start();
+
+// Include navigation
+include 'nav.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -18,6 +21,7 @@ session_start();
     
     
     <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     
     <!-- Add new style tag -->
     <style>
@@ -32,74 +36,6 @@ session_start();
     </style>
 </head>
 <body>
-    <!-- Header/Navigation -->
-    <nav class="navbar">
-        <div class="nav-content">
-            <a href="/" class="logo">
-                <img src="images/logo.png" alt="GEAR EQUIP">
-            </a>
-            <div class="nav-links">
-                <a href="#home">Home</a>
-                <a href="#categories">Categories</a>
-                <a href="#machines">Machines</a>
-                <a href="#about">About</a>
-                <a href="#contact">Contact</a>
-            </div>
-            <div class="auth-buttons" style="display: flex; gap: 12px;">
-                <?php if(isset($_SESSION['user_id'])): ?>
-                    <!-- Show user info and logout when logged in -->
-                    <span style="color: #333; margin-right: 10px;">
-                        Welcome, <?php echo htmlspecialchars($_SESSION['full_name'] ?? ''); ?>
-                    </span>
-                    <a href="logout.php" class="login-btn" style="padding: 10px 24px; 
-                        background: linear-gradient(145deg, #27ae60, #219a52); 
-                        color: white; 
-                        border: none; 
-                        border-radius: 25px; 
-                        font-size: 14px; 
-                        font-weight: 600; 
-                        cursor: pointer; 
-                        transition: all 0.3s ease;
-                        box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
-                        text-decoration: none;
-                        display: inline-block;">
-                        Logout
-                    </a>
-                <?php else: ?>
-                    <!-- Show login/register buttons when not logged in -->
-                    <a href="login.php" class="login-btn" style="padding: 10px 24px; 
-                        background: linear-gradient(145deg, #27ae60, #219a52); 
-                        color: white; 
-                        border: none; 
-                        border-radius: 25px; 
-                        font-size: 14px; 
-                        font-weight: 600; 
-                        cursor: pointer; 
-                        transition: all 0.3s ease;
-                        box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
-                        text-decoration: none;
-                        display: inline-block;">
-                        Login
-                    </a>
-                    <a href="register.php" class="register-btn" style="padding: 10px 24px; 
-                        background: linear-gradient(145deg, #2196f3, #1e88e5); 
-                        color: white; 
-                        border: none; 
-                        border-radius: 25px; 
-                        font-size: 14px; 
-                        font-weight: 500; 
-                        cursor: pointer; 
-                        transition: all 0.3s ease;
-                        box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
-                        text-decoration: none;
-                        display: inline-block;">
-                        Register
-                    </a>
-                <?php endif; ?>
-            </div>
-        </div>
-    </nav>
-
     <!-- Hero Section with Video Background -->
     <section class="hero" id="home">
         <div class="video-container">
