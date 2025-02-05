@@ -10,25 +10,43 @@ $valid_token = false;
 $token = isset($_GET['token']) ? $_GET['token'] : '';
 
 if (!empty($token)) {
-    // Verify token and check expiry
+    // Convert times to UTC for comparison
     $stmt = mysqli_prepare($conn, 
-        "SELECT t.*, u.email 
+        "SELECT t.*, u.email, u.full_name 
          FROM password_reset_tokens t 
          JOIN users u ON t.user_id = u.user_id 
-         WHERE t.token = ? AND t.expiry > NOW()");
+         WHERE t.token = ? AND t.expiry > UTC_TIMESTAMP()");
+    
+    if (!$stmt) {
+        die("Error preparing statement: " . mysqli_error($conn));
+    }
+    
     mysqli_stmt_bind_param($stmt, "s", $token);
-    mysqli_stmt_execute($stmt);
+    
+    if (!mysqli_stmt_execute($stmt)) {
+        die("Error executing statement: " . mysqli_error($conn));
+    }
+    
     $result = mysqli_stmt_get_result($stmt);
     
     if ($token_data = mysqli_fetch_assoc($result)) {
         $valid_token = true;
         
         if ($_SERVER["REQUEST_METHOD"] == "POST") {
-            $password = $_POST['password'];
-            $confirm_password = $_POST['confirm_password'];
+            $password = trim($_POST['password']);
+            $confirm_password = trim($_POST['confirm_password']);
+            
+            // Enhanced password validation
+            $uppercase = preg_match('@[A-Z]@', $password);
+            $lowercase = preg_match('@[a-z]@', $password);
+            $number    = preg_match('@[0-9]@', $password);
+            $specialChars = preg_match('@[^\w]@', $password);
             
             if (strlen($password) < 8) {
                 $message = "Password must be at least 8 characters long.";
+                $message_type = 'error';
+            } elseif (!$uppercase || !$lowercase || !$number || !$specialChars) {
+                $message = "Password must include at least one uppercase letter, one lowercase letter, one number, and one special character.";
                 $message_type = 'error';
             } elseif ($password !== $confirm_password) {
                 $message = "Passwords do not match.";
@@ -47,6 +65,9 @@ if (!empty($token)) {
                     
                     $message = "Password has been reset successfully. You can now <a href='login.php' class='text-blue-500 hover:text-blue-800'>login</a> with your new password.";
                     $message_type = 'success';
+                    
+                    // Clear the form by setting valid_token to false
+                    $valid_token = false;
                 } else {
                     $message = "Error updating password. Please try again.";
                     $message_type = 'error';
@@ -54,13 +75,25 @@ if (!empty($token)) {
             }
         }
     } else {
-        $message = "Invalid or expired reset token.";
+        $message = "This password reset link has expired or is invalid. Please request a new one from the <a href='forgot_password.php' class='text-blue-500 hover:text-blue-800'>forgot password page</a>.";
         $message_type = 'error';
     }
     mysqli_stmt_close($stmt);
 } else {
-    $message = "No reset token provided.";
+    $message = "Invalid request. Please request a password reset from the <a href='forgot_password.php' class='text-blue-500 hover:text-blue-800'>forgot password page</a>.";
     $message_type = 'error';
+}
+
+// Debug information (remove in production)
+if ($message_type === 'error') {
+    $debug_query = "SELECT token, expiry, NOW() as current_time FROM password_reset_tokens WHERE token = ?";
+    $debug_stmt = mysqli_prepare($conn, $debug_query);
+    mysqli_stmt_bind_param($debug_stmt, "s", $token);
+    mysqli_stmt_execute($debug_stmt);
+    $debug_result = mysqli_stmt_get_result($debug_stmt);
+    if ($debug_data = mysqli_fetch_assoc($debug_result)) {
+        $message .= "<br><small>Debug: Token exists, expires at " . $debug_data['expiry'] . ", current time is " . $debug_data['current_time'] . "</small>";
+    }
 }
 ?>
 
@@ -72,6 +105,35 @@ if (!empty($token)) {
     <title>Reset Password - GEAR EQUIP</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .password-requirements {
+            display: none;
+            background: #f8fafc;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        .password-requirements.show {
+            display: block;
+        }
+        .requirement {
+            color: #64748b;
+            margin: 0.25rem 0;
+            font-size: 0.875rem;
+        }
+        .requirement.valid {
+            color: #22c55e;
+        }
+        .requirement.valid::before {
+            content: "✓ ";
+        }
+        .requirement.invalid {
+            color: #ef4444;
+        }
+        .requirement.invalid::before {
+            content: "× ";
+        }
+    </style>
 </head>
 <body class="bg-gray-100 font-[Poppins]">
     <div class="min-h-screen flex items-center justify-center">
@@ -91,8 +153,9 @@ if (!empty($token)) {
             <?php endif; ?>
 
             <?php if ($valid_token): ?>
-                <form method="POST" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]) . '?token=' . htmlspecialchars($token); ?>">
-                    <div class="mb-4">
+                <form method="POST" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]) . '?token=' . htmlspecialchars($token); ?>" 
+                      class="space-y-4" id="resetForm">
+                    <div>
                         <label class="block text-gray-700 text-sm font-bold mb-2" for="password">
                             New Password
                         </label>
@@ -102,11 +165,16 @@ if (!empty($token)) {
                                name="password"
                                required
                                minlength="8">
-                        <div class="password-strength" style="height: 4px; margin-top: 5px; transition: all 0.3s ease;"></div>
-                        <p class="text-gray-600 text-xs mt-1">Must be at least 8 characters long</p>
+                        <div class="password-requirements" id="passwordRequirements">
+                            <div class="requirement" id="length">8+ characters</div>
+                            <div class="requirement" id="uppercase">One uppercase letter</div>
+                            <div class="requirement" id="lowercase">One lowercase letter</div>
+                            <div class="requirement" id="number">One number</div>
+                            <div class="requirement" id="special">One special character</div>
+                        </div>
                     </div>
                     
-                    <div class="mb-6">
+                    <div>
                         <label class="block text-gray-700 text-sm font-bold mb-2" for="confirm_password">
                             Confirm New Password
                         </label>
@@ -115,18 +183,19 @@ if (!empty($token)) {
                                type="password"
                                name="confirm_password"
                                required>
+                        <div class="requirement mt-1" id="passwordMatch"></div>
                     </div>
                     
-                    <div class="flex items-center justify-between">
-                        <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full"
-                                type="submit">
-                            Reset Password
-                        </button>
-                    </div>
+                    <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full"
+                            type="submit"
+                            id="submitBtn"
+                            disabled>
+                        Reset Password
+                    </button>
                 </form>
             <?php endif; ?>
             
-            <div class="text-center">
+            <div class="text-center mt-4">
                 <a href="login.php" class="text-sm text-gray-600 hover:text-gray-800">
                     ← Back to Login
                 </a>
@@ -135,112 +204,113 @@ if (!empty($token)) {
     </div>
 
     <script>
-        // Helper function to show error message
-        function showError(input, message) {
-            const formGroup = input.parentElement;
-            const errorDiv = formGroup.querySelector('.error-text') || document.createElement('div');
-            errorDiv.className = 'error-text text-red-500 text-sm mt-1';
-            errorDiv.textContent = message;
-            
-            if (!formGroup.querySelector('.error-text')) {
-                formGroup.appendChild(errorDiv);
-            }
-            
-            input.classList.add('border-red-500');
-            input.classList.remove('border-green-500');
-        }
+        const form = document.getElementById('resetForm');
+        const password = document.getElementById('password');
+        const confirmPassword = document.getElementById('confirm_password');
+        const submitBtn = document.getElementById('submitBtn');
+        const requirements = document.getElementById('passwordRequirements');
+        const passwordMatch = document.getElementById('passwordMatch');
 
-        // Helper function to show success
-        function showSuccess(input) {
-            const formGroup = input.parentElement;
-            const errorDiv = formGroup.querySelector('.error-text');
-            if (errorDiv) {
-                formGroup.removeChild(errorDiv);
-            }
-            input.classList.remove('border-red-500');
-            input.classList.add('border-green-500');
-        }
-
-        // Validate password
-        function validatePassword() {
-            const passwordInput = document.getElementById('password');
-            const password = passwordInput.value.trim();
-
-            if (password === '') {
-                showError(passwordInput, 'Password is required');
-                return false;
-            } else if (password.length < 8) {
-                showError(passwordInput, 'Password must be at least 8 characters');
-                return false;
-            } else {
-                showSuccess(passwordInput);
-                return true;
-            }
-        }
-
-        // Validate confirm password
-        function validateConfirmPassword() {
-            const passwordInput = document.getElementById('password');
-            const confirmPasswordInput = document.getElementById('confirm_password');
-            const confirmPassword = confirmPasswordInput.value.trim();
-
-            if (confirmPassword === '') {
-                showError(confirmPasswordInput, 'Please confirm your password');
-                return false;
-            } else if (confirmPassword !== passwordInput.value.trim()) {
-                showError(confirmPasswordInput, 'Passwords do not match');
-                return false;
-            } else {
-                showSuccess(confirmPasswordInput);
-                return true;
-            }
-        }
-
-        // Add event listeners for live validation
-        document.getElementById('password').addEventListener('input', validatePassword);
-        document.getElementById('confirm_password').addEventListener('input', validateConfirmPassword);
-
-        // Form submission validation
-        document.querySelector('form')?.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const isPasswordValid = validatePassword();
-            const isConfirmPasswordValid = validateConfirmPassword();
-
-            if (isPasswordValid && isConfirmPasswordValid) {
-                this.submit();
-            }
+        // Show password requirements when password field is focused
+        password.addEventListener('focus', () => {
+            requirements.classList.add('show');
         });
 
-        // Add password strength indicator
-        const passwordInput = document.getElementById('password');
-        const strengthIndicator = document.querySelector('.password-strength');
+        function validatePassword() {
+            const value = password.value;
+            let valid = true;
 
-        passwordInput?.addEventListener('input', function() {
-            const password = this.value;
-            let strength = 0;
-            
-            // Length check
-            if (password.length >= 8) strength += 25;
-            
-            // Contains number
-            if (/\d/.test(password)) strength += 25;
-            
-            // Contains letter
-            if (/[a-zA-Z]/.test(password)) strength += 25;
-            
-            // Contains special character
-            if (/[^A-Za-z0-9]/.test(password)) strength += 25;
-
-            strengthIndicator.style.width = strength + '%';
-            
-            if (strength <= 25) {
-                strengthIndicator.style.backgroundColor = '#e74c3c';
-            } else if (strength <= 50) {
-                strengthIndicator.style.backgroundColor = '#f39c12';
-            } else if (strength <= 75) {
-                strengthIndicator.style.backgroundColor = '#3498db';
+            // Check length
+            const lengthReq = document.getElementById('length');
+            if (value.length >= 8) {
+                lengthReq.classList.add('valid');
+                lengthReq.classList.remove('invalid');
             } else {
-                strengthIndicator.style.backgroundColor = '#2ecc71';
+                lengthReq.classList.add('invalid');
+                lengthReq.classList.remove('valid');
+                valid = false;
+            }
+
+            // Check uppercase
+            const upperReq = document.getElementById('uppercase');
+            if (/[A-Z]/.test(value)) {
+                upperReq.classList.add('valid');
+                upperReq.classList.remove('invalid');
+            } else {
+                upperReq.classList.add('invalid');
+                upperReq.classList.remove('valid');
+                valid = false;
+            }
+
+            // Check lowercase
+            const lowerReq = document.getElementById('lowercase');
+            if (/[a-z]/.test(value)) {
+                lowerReq.classList.add('valid');
+                lowerReq.classList.remove('invalid');
+            } else {
+                lowerReq.classList.add('invalid');
+                lowerReq.classList.remove('valid');
+                valid = false;
+            }
+
+            // Check number
+            const numberReq = document.getElementById('number');
+            if (/[0-9]/.test(value)) {
+                numberReq.classList.add('valid');
+                numberReq.classList.remove('invalid');
+            } else {
+                numberReq.classList.add('invalid');
+                numberReq.classList.remove('valid');
+                valid = false;
+            }
+
+            // Check special character
+            const specialReq = document.getElementById('special');
+            if (/[^A-Za-z0-9]/.test(value)) {
+                specialReq.classList.add('valid');
+                specialReq.classList.remove('invalid');
+            } else {
+                specialReq.classList.add('invalid');
+                specialReq.classList.remove('valid');
+                valid = false;
+            }
+
+            return valid;
+        }
+
+        function validateConfirmPassword() {
+            if (confirmPassword.value === password.value && confirmPassword.value !== '') {
+                passwordMatch.textContent = "Passwords match";
+                passwordMatch.classList.add('valid');
+                passwordMatch.classList.remove('invalid');
+                return true;
+            } else {
+                passwordMatch.textContent = "Passwords do not match";
+                passwordMatch.classList.add('invalid');
+                passwordMatch.classList.remove('valid');
+                return false;
+            }
+        }
+
+        function updateSubmitButton() {
+            submitBtn.disabled = !(validatePassword() && validateConfirmPassword());
+        }
+
+        password.addEventListener('input', () => {
+            validatePassword();
+            validateConfirmPassword();
+            updateSubmitButton();
+        });
+
+        confirmPassword.addEventListener('input', () => {
+            validateConfirmPassword();
+            updateSubmitButton();
+        });
+
+        // Prevent form submission if validation fails
+        form?.addEventListener('submit', (e) => {
+            if (!(validatePassword() && validateConfirmPassword())) {
+                e.preventDefault();
             }
         });
     </script>

@@ -3,6 +3,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 require_once 'config.php';
+require_once 'includes/mail_helper.php';
 
 $message = '';
 $message_type = '';
@@ -36,10 +37,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                          dirname($_SERVER['PHP_SELF']) . 
                          "/reset_password.php?token=" . $token;
             
-            // In a production environment, you would send this via email
-            $message = "A password reset link has been generated. For testing purposes, here's the link:<br>";
-            $message .= "<a href='" . htmlspecialchars($reset_link) . "' style='color: #4a90e2; text-decoration: underline;'>Reset Password</a>";
-            $message_type = 'success';
+            try {
+                // Send password reset email
+                sendPasswordResetEmail($email, $user['full_name'], $reset_link);
+                $message = "Password reset instructions have been sent to your email address.";
+                $message_type = 'success';
+            } catch (Exception $e) {
+                $message = "Error sending password reset email. Please try again later.";
+                $message_type = 'error';
+                // Log the error for administrators
+                error_log("Password reset email error: " . $e->getMessage());
+            }
         } else {
             $message = "Error generating reset token. Please try again.";
             $message_type = 'error';
