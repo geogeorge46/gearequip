@@ -1,3 +1,13 @@
+<?php
+// Include database connection
+include 'config.php';
+
+// Start the session for user management
+session_start();
+
+// Include navigation
+include 'nav.php';
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -11,6 +21,7 @@
     
     
     <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     
     <!-- Add new style tag -->
     <style>
@@ -25,52 +36,6 @@
     </style>
 </head>
 <body>
-    <!-- Header/Navigation -->
-    <nav class="navbar">
-        <div class="nav-content">
-            <a href="/" class="logo">
-                <img src="images/logo.png" alt="GEAR EQUIP">
-            </a>
-            <div class="nav-links">
-                <a href="#home">Home</a>
-                <a href="#categories">Categories</a>
-                <a href="#machines">Machines</a>
-                <a href="#about">About</a>
-                <a href="#contact">Contact</a>
-            </div>
-            <div class="auth-buttons" style="display: flex; gap: 12px;">
-                <a href="login.php" class="login-btn" style="padding: 10px 24px; 
-                    background: linear-gradient(145deg, #27ae60, #219a52); 
-                    color: white; 
-                    border: none; 
-                    border-radius: 25px; 
-                    font-size: 14px; 
-                    font-weight: 600; 
-                    cursor: pointer; 
-                    transition: all 0.3s ease;
-                    box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
-                    text-decoration: none;
-                    display: inline-block;">
-                    Login
-                </a>
-                <a href="register.php" class="register-btn" style="padding: 10px 24px; 
-                    background: linear-gradient(145deg, #2196f3, #1e88e5); 
-                    color: white; 
-                    border: none; 
-                    border-radius: 25px; 
-                    font-size: 14px; 
-                    font-weight: 500; 
-                    cursor: pointer; 
-                    transition: all 0.3s ease;
-                    box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
-                    text-decoration: none;
-                    display: inline-block;">
-                    Register
-                </a>
-            </div>
-        </div>
-    </nav>
-
     <!-- Hero Section with Video Background -->
     <section class="hero" id="home">
         <div class="video-container">
@@ -106,38 +71,47 @@
     <section class="top-machines" id="machines">
         <h2 class="text-4xl font-extrabold text-center text-[#2c3e50] mb-12 uppercase tracking-wide">Top Machines on Rent</h2>
         <div class="machine-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 px-4 max-w-7xl mx-auto">
-            <div class="machine-card bg-white rounded-lg overflow-hidden shadow-lg transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
-                <span class="badge absolute top-4 right-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-semibold">Popular</span>
-                <img src="./images/excavator.jpg" alt="Excavator" class="w-full h-48 object-cover">
-                <div class="p-6">
-                    <h3 class="text-2xl font-bold text-[#2c3e50] mb-3">CAT Excavator 320</h3>
-                    <div class="text-yellow-500 text-lg mb-2">★★★★★ <span class="text-gray-600 text-sm">(4.9)</span></div>
-                    <p class="text-xl font-bold text-green-600 mb-4">₹15,000/day</p>
-                    <button class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg transition duration-300">Rent Now</button>
-                </div>
-            </div>
+            <?php
+            // Fetch machines from database
+            $sql = "SELECT * FROM machines WHERE status = 'available' LIMIT 3";
+            $result = mysqli_query($conn, $sql);
 
-            <div class="machine-card bg-white rounded-lg overflow-hidden shadow-lg transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
-                <span class="badge absolute top-4 right-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-semibold">Popular</span>
-                <img src="./images/truck.jpg" alt="Truck" class="w-full h-48 object-cover">
-                <div class="p-6">
-                    <h3 class="text-2xl font-bold text-[#2c3e50] mb-3">Heavy Duty Truck</h3>
-                    <div class="text-yellow-500 text-lg mb-2">★★★★☆ <span class="text-gray-600 text-sm">(4.5)</span></div>
-                    <p class="text-xl font-bold text-green-600 mb-4">₹12,000/day</p>
-                    <button class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg transition duration-300">Rent Now</button>
+            if (mysqli_num_rows($result) > 0) {
+                while($row = mysqli_fetch_assoc($result)) {
+                    ?>
+                    <div class="machine-card bg-white rounded-lg overflow-hidden shadow-lg transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
+                        <span class="badge absolute top-4 right-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-semibold">Popular</span>
+                        <img src="./images/<?php echo htmlspecialchars($row['image']); ?>" alt="<?php echo htmlspecialchars($row['name']); ?>" class="w-full h-48 object-cover">
+                        <div class="p-6">
+                            <h3 class="text-2xl font-bold text-[#2c3e50] mb-3"><?php echo htmlspecialchars($row['name']); ?></h3>
+                            <div class="text-yellow-500 text-lg mb-2">
+                                <?php echo str_repeat('★', floor($row['rating'])); ?>
+                                <span class="text-gray-600 text-sm">(<?php echo number_format($row['rating'], 1); ?>)</span>
+                            </div>
+                            <p class="text-xl font-bold text-green-600 mb-4">₹<?php echo number_format($row['price']); ?>/day</p>
+                            <?php if(isset($_SESSION['user_id'])): ?>
+                                <button onclick="window.location.href='rent.php?id=<?php echo $row['machine_id']; ?>'" 
+                                        class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg transition duration-300">
+                                    Rent Now
+                                </button>
+                            <?php else: ?>
+                                <button onclick="window.location.href='login.php'" 
+                                        class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg transition duration-300">
+                                    Login to Rent
+                                </button>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <?php
+                }
+            } else {
+                ?>
+                <div class="col-span-3 text-center text-gray-600">
+                    <p>No machines available at the moment.</p>
                 </div>
-            </div>
-
-            <div class="machine-card bg-white rounded-lg overflow-hidden shadow-lg transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
-                <span class="badge absolute top-4 right-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-semibold">Popular</span>
-                <img src="./images/crane.jpg" alt="Crane" class="w-full h-48 object-cover">
-                <div class="p-6">
-                    <h3 class="text-2xl font-bold text-[#2c3e50] mb-3">Mobile Crane 50T</h3>
-                    <div class="text-yellow-500 text-lg mb-2">★★★★★ <span class="text-gray-600 text-sm">(4.8)</span></div>
-                    <p class="text-xl font-bold text-green-600 mb-4">₹20,000/day</p>
-                    <button class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg transition duration-300">Rent Now</button>
-                </div>
-            </div>
+                <?php
+            }
+            ?>
         </div>
     </section>
 

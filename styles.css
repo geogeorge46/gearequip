@@ -143,34 +143,42 @@ body {
     transform: scale(1.05);
 }
 
-/* Hero Section */
+/* ===================================
+   Video Hero Section Styles
+   =================================== */
 .hero {
     position: relative;
-    height: 100vh;
+    min-height: 100vh;
     width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6rem 2rem 4rem;
+    text-align: center;
+    color: white;
     overflow: hidden;
 }
 
-.video-container {
+.video-background {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    overflow: hidden;
-    z-index: -1;
+    z-index: 0;
 }
 
 #myVideo {
     position: absolute;
     top: 50%;
     left: 50%;
+    transform: translate(-50%, -50%);
     min-width: 100%;
     min-height: 100%;
-    width: auto;
-    height: auto;
-    transform: translateX(-50%) translateY(-50%);
+    width: 100%;
+    height: 100%;
     object-fit: cover;
+    z-index: -1;
 }
 
 .overlay {
@@ -179,38 +187,31 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 1;
 }
 
 .hero-content {
     position: relative;
-    z-index: 1;
-    color: white;
-    text-align: center;
-    padding-top: 20vh;
-}
-
-.hero h1 {
-    font-size: 3rem;
-    margin-bottom: 1.5rem;
+    z-index: 2;
+    width: 100%;
+    max-width: 800px;
+    animation: fadeInUp 1s ease;
 }
 
 .search-container {
     margin-top: 2rem;
+    position: relative;
 }
 
 .search-bar {
     display: flex;
     gap: 1rem;
-    background: white;
-    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 0.8rem;
     border-radius: 50px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-    transition: transform 0.3s ease;
-}
-
-.search-bar:focus-within {
-    transform: translateY(-2px);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(5px);
 }
 
 .search-bar input,
@@ -239,6 +240,75 @@ body {
 .search-btn:hover {
     background: var(--primary-dark);
     transform: translateY(-2px);
+}
+
+/* ===================================
+   How It Works Section Styles
+   =================================== */
+.how-it-works {
+    position: relative;
+    overflow: hidden;
+    padding: 80px 20px;
+}
+
+.steps {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    padding: 20px;
+    position: relative;
+    z-index: 1;
+}
+
+.step-card {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: transform 0.3s ease;
+}
+
+.step-card:hover {
+    transform: translateY(-5px);
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.step-number {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(45deg, #FFD700, #FFA500);
+    color: #000000;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 15px;
+    font-size: 1.5em;
+    font-weight: bold;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    transition: all 0.3s ease;
+}
+
+.step-card:hover .step-number {
+    transform: scale(1.1);
+    background: linear-gradient(45deg, #FFA500, #FFD700);
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.7);
+}
+
+.step-card h3 {
+    color: #ffffff;
+    font-size: 1.2em;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+.step-card p {
+    color: #ffffff;
+    font-size: 0.9em;
+    line-height: 1.5;
 }
 
 /* Top Machines Section */
@@ -350,41 +420,6 @@ body {
 .category-card:nth-child(3) { animation-delay: 0.3s; }
 .category-card:nth-child(4) { animation-delay: 0.4s; }
 
-/* How It Works Section */
-.how-it-works {
-    padding: 4rem 2rem;
-}
-
-.steps {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 2rem;
-    max-width: 1200px;
-    margin: 2rem auto;
-}
-
-.step-card {
-    text-align: center;
-    padding: 2rem;
-    border-radius: 15px;
-    background: white;
-    box-shadow: 0 4px 15px var(--shadow);
-    transition: all 0.3s ease;
-}
-
-.step-number {
-    width: 40px;
-    height: 40px;
-    background: var(--primary);
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 1rem;
-    font-weight: bold;
-}
-
 /* Testimonials Section */
 .testimonials {
     padding: 4rem 2rem;
@@ -493,6 +528,29 @@ footer {
 
     .navbar .logo img {
         height: 45px;
+    }
+}
+
+@media (max-width: 768px) {
+    #myVideo {
+        height: 100%;
+        width: 100%;
+        object-fit: cover;
+    }
+    
+    .search-bar {
+        flex-direction: column;
+        padding: 1rem;
+    }
+
+    .steps {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .steps {
+        grid-template-columns: 1fr;
     }
 }
 

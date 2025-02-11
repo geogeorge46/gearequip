@@ -8,32 +8,44 @@ require_once 'config.php';
 $login_error = '';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $email = trim($_POST['email']);
+    $email = mysqli_real_escape_string($conn, trim($_POST['email']));
     $password = $_POST['password'];
     
-    try {
-        if (empty($email) || empty($password)) {
-            $login_error = "Please fill in all fields";
-        } else {
-            $stmt = $conn->prepare("SELECT * FROM users WHERE email = ?");
-            $stmt->execute([$email]);
-            $user = $stmt->fetch();
-            
-            if ($user && password_verify($password, $user['password'])) {
-                $_SESSION['user_id'] = $user['id'];
-                $_SESSION['user_name'] = $user['full_name'];
+    if (empty($email) || empty($password)) {
+        $login_error = "Please fill in all fields";
+    } else {
+        // Using mysqli prepared statement
+        $stmt = mysqli_prepare($conn, "SELECT * FROM users WHERE email = ?");
+        mysqli_stmt_bind_param($stmt, "s", $email);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+        
+        if ($row = mysqli_fetch_assoc($result)) {
+            if (password_verify($password, $row['password'])) {
+                $_SESSION['user_id'] = $row['user_id'];
+                $_SESSION['full_name'] = $row['full_name'];
+                $_SESSION['role'] = $row['role'];
                 
-                // Debug message
-                echo "Login successful! Redirecting...";
-                
-                header("Location: index.php");
+                // Redirect based on user role
+                switch($row['role']) {
+                    case 'admin':
+                        header("Location: admin_dashboard.php");
+                        break;
+                    case 'manager':
+                        header("Location: manager_dashboard.php");
+                        break;
+                    default:
+                        header("Location: index.php");
+                        break;
+                }
                 exit();
             } else {
                 $login_error = "Invalid email or password";
             }
+        } else {
+            $login_error = "Invalid email or password";
         }
-    } catch(PDOException $e) {
-        $login_error = "Login error: " . $e->getMessage();
+        mysqli_stmt_close($stmt);
     }
 }
 ?>
@@ -101,94 +113,73 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         .form-group label {
             display: block;
+            color: #666;
             margin-bottom: 8px;
-            color: #555;
-            font-size: 14px;
         }
 
         .form-group input {
             width: 100%;
-            padding: 12px 15px;
+            padding: 12px;
             border: 1px solid #ddd;
             border-radius: 8px;
-            font-size: 14px;
-            transition: all 0.3s ease;
+            font-size: 16px;
+            transition: border-color 0.3s;
         }
 
         .form-group input:focus {
-            border-color: #2196f3;
-            box-shadow: 0 0 0 2px rgba(33,150,243,0.1);
+            border-color: #4a90e2;
             outline: none;
-        }
-
-        .remember-forgot {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-
-        .remember-me {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .forgot-password {
-            color: #2196f3;
-            text-decoration: none;
-        }
-
-        .forgot-password:hover {
-            text-decoration: underline;
         }
 
         .login-btn {
             width: 100%;
             padding: 14px;
-            background: linear-gradient(145deg, #27ae60, #219a52);
+            background: #4a90e2;
             color: white;
             border: none;
             border-radius: 8px;
             font-size: 16px;
-            font-weight: 500;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
-            margin-bottom: 20px;
+            transition: background 0.3s;
+            margin-bottom: 15px;
         }
 
         .login-btn:hover {
-            background: linear-gradient(145deg, #219a52, #1e8449);
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(39,174,96,0.3);
+            background: #357abd;
         }
 
-        .register-link {
+        .error-message {
+            color: #e74c3c;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #fdf0ef;
+            border-radius: 5px;
             text-align: center;
-            font-size: 14px;
-            color: #666;
         }
 
-        .register-link a {
-            color: #2196f3;
+        .forgot-password {
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .forgot-password a {
+            color: #4a90e2;
             text-decoration: none;
-            font-weight: 500;
+            font-size: 14px;
+            transition: color 0.3s;
         }
 
-        .register-link a:hover {
+        .forgot-password a:hover {
+            color: #357abd;
             text-decoration: underline;
         }
 
-        .benefit-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 15px;
-            transition: transform 0.3s ease;
-        }
-
-        .benefit-item:hover {
-            transform: translateX(5px);
+        .sign-up-link {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
         }
 
         @media (max-width: 768px) {
@@ -204,90 +195,37 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <div class="logo">
                 <img src="images/logo.png" alt="GEAR EQUIP" style="height: 40px;">
             </div>
-            <div class="image-content">
-                <h2 style="font-size: 28px; margin-bottom: 20px;">Welcome Back!</h2>
-                <div class="benefits" style="margin-bottom: 30px;">
-                    <div class="benefit-item">
-                        <span style="background: rgba(255,255,255,0.2); border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; margin-right: 10px;">✓</span>
-                        <p>Quick Equipment Access</p>
-                    </div>
-                    <div class="benefit-item">
-                        <span style="background: rgba(255,255,255,0.2); border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; margin-right: 10px;">✓</span>
-                        <p>View Rental History</p>
-                    </div>
-                    <div class="benefit-item">
-                        <span style="background: rgba(255,255,255,0.2); border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; margin-right: 10px;">✓</span>
-                        <p>Exclusive Member Discounts</p>
-                    </div>
-                </div>
-                <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 15px; margin-bottom: 20px;">
-                    <p style="font-style: italic; margin-bottom: 10px;">"The best equipment rental platform I've ever used. Seamless experience every time!"</p>
-                    <div style="display: flex; align-items: center;">
-                        <img src="images/user-avatar.jpg" alt="User" style="width: 40px; height: 40px; border-radius: 50%; margin-right: 10px;">
-                        <div>
-                            <p style="font-weight: 600;">Sarah Johnson</p>
-                            <p style="font-size: 12px;">Project Manager</p>
-                        </div>
-                    </div>
-                </div>
+            <div class="welcome-text">
+                <h2>Welcome Back!</h2>
+                <p>Access your account to manage equipment rentals and more.</p>
             </div>
         </div>
         <div class="login-form">
             <h2 class="form-title">Login to Your Account</h2>
-            <form id="loginForm" method="POST" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
-                <?php if (!empty($login_error)): ?>
-                    <div style="color: #e74c3c; margin-bottom: 20px; padding: 10px; background: rgba(231, 76, 60, 0.1); border-radius: 5px;">
-                        <?php echo $login_error; ?>
-                    </div>
-                <?php endif; ?>
-
+            <?php if (!empty($login_error)): ?>
+                <div class="error-message">
+                    <?php echo htmlspecialchars($login_error); ?>
+                </div>
+            <?php endif; ?>
+            <form method="POST" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
                 <div class="form-group">
                     <label for="email">Email Address</label>
-                    <input type="email" id="email" name="email" value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>" required>
+                    <input type="email" id="email" name="email" required>
                 </div>
                 <div class="form-group">
                     <label for="password">Password</label>
                     <input type="password" id="password" name="password" required>
                 </div>
-                <div class="remember-forgot">
-                    <label class="remember-me">
-                        <input type="checkbox" name="remember">
-                        <span>Remember me</span>
-                    </label>
-                    <a href="#" class="forgot-password">Forgot Password?</a>
-                </div>
                 <button type="submit" class="login-btn">Login</button>
-                <div class="register-link">
-                    Don't have an account? <a href="register.html">Register here</a>
+                <div class="forgot-password">
+                    <a href="forgot_password.php">Forgot Password?</a>
+                </div>
+                <div class="sign-up-link" style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
+                    <span style="color: #666;">Don't have an account? </span>
+                    <a href="register.php" style="color: #4a90e2; text-decoration: none; font-weight: 600;">Sign up</a>
                 </div>
             </form>
         </div>
     </div>
-
-    <script>
-        function validateLogin(event) {
-            event.preventDefault();
-            
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            
-            // Basic validation
-            if (!email || !password) {
-                alert('Please fill in all fields');
-                return false;
-            }
-            
-            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-                alert('Please enter a valid email address');
-                return false;
-            }
-            
-            // If validation passes
-            alert('Login successful!');
-            // Add your login logic here
-            
-            return false; // Prevent form submission for this example
-        }
-    </script>
 </body>
 </html>
