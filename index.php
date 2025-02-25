@@ -33,6 +33,15 @@ include 'nav.php';
             margin-bottom: 3rem !important;
             text-transform: uppercase !important;
         }
+        .machine-image {
+            width: 100%;
+            height: 48px;
+            object-fit: cover;
+        }
+        .machine-image.error {
+            /* Style for when image fails to load */
+            background-color: #f3f4f6;
+        }
     </style>
 </head>
 <body>
@@ -73,7 +82,7 @@ include 'nav.php';
         <div class="machine-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 px-4 max-w-7xl mx-auto">
             <?php
             // Fetch machines from database
-            $sql = "SELECT * FROM machines WHERE status = 'available' LIMIT 3";
+            $sql = "SELECT *, daily_rate as price FROM machines WHERE status = 'available' LIMIT 3";
             $result = mysqli_query($conn, $sql);
 
             if (mysqli_num_rows($result) > 0) {
@@ -81,7 +90,17 @@ include 'nav.php';
                     ?>
                     <div class="machine-card bg-white rounded-lg overflow-hidden shadow-lg transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
                         <span class="badge absolute top-4 right-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-semibold">Popular</span>
-                        <img src="./images/<?php echo htmlspecialchars($row['image']); ?>" alt="<?php echo htmlspecialchars($row['name']); ?>" class="w-full h-48 object-cover">
+                        <img src="<?php 
+                            if (!empty($row['image_url']) && file_exists($row['image_url'])) {
+                                echo htmlspecialchars($row['image_url']);
+                            } else {
+                                echo 'images/default-machine.jpg';
+                            }
+                            ?>" 
+                             alt="<?php echo htmlspecialchars($row['name']); ?>" 
+                             class="w-full h-48 object-cover"
+                             onerror="this.src='images/default-machine.jpg'"
+                        >
                         <div class="p-6">
                             <h3 class="text-2xl font-bold text-[#2c3e50] mb-3"><?php echo htmlspecialchars($row['name']); ?></h3>
                             <div class="text-yellow-500 text-lg mb-2">
@@ -227,32 +246,17 @@ include 'nav.php';
     </section>
 
     <!-- Footer -->
-    <footer>
-        <div class="footer-content">
-            <div class="footer-section">
-                <h3>Contact Us</h3>
-                <p>Email: info@gearequip.com</p>
-                <p>Phone: +91 1234567890</p>
-                <p>Address: 123 Business Park, Mumbai, India</p>
-            </div>
-            <div class="footer-section">
-                <h3>Quick Links</h3>
-                <a href="#about">About Us</a>
-                <a href="#terms">Terms & Conditions</a>
-                <a href="#privacy">Privacy Policy</a>
-            </div>
-            <div class="footer-section">
-                <h3>Follow Us</h3>
-                <div class="social-links">
-                    <a href="#">Facebook</a>
-                    <a href="#">Twitter</a>
-                    <a href="#">LinkedIn</a>
-                </div>
-            </div>
-        </div>
-        <div class="footer-bottom">
-            <p>&copy; 2024 GEAR EQUIP. All rights reserved.</p>
-        </div>
-    </footer>
+     <?php  
+   include 'footer.php';
+   ?>
+
+    <!-- Add this JavaScript to handle image errors -->
+    <script>
+    function handleImageError(img) {
+        img.onerror = null; // Prevent infinite loop
+        img.src = 'images/default-machine.jpg';
+        img.classList.add('error');
+    }
+    </script>
 </body>
 </html>

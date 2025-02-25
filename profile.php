@@ -181,24 +181,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="space-y-4">
                     <?php
                     // Fetch recent rentals
-                    $activity_sql = "SELECT * FROM rentals WHERE user_id = ? ORDER BY rental_date DESC LIMIT 5";
-                    $activity_stmt = $conn->prepare($activity_sql);
-                    $activity_stmt->bind_param("i", $user_id);
-                    $activity_stmt->execute();
-                    $activities = $activity_stmt->get_result();
+                    $rental_query = "SELECT r.*, m.name as machine_name, m.image_url, m.daily_rate 
+                                     FROM rentals r 
+                                     JOIN machines m ON r.machine_id = m.machine_id 
+                                     WHERE r.user_id = ? 
+                                     ORDER BY r.created_at DESC";
 
-                    if ($activities->num_rows > 0):
-                        while ($activity = $activities->fetch_assoc()):
+                    $stmt = $conn->prepare($rental_query);
+                    $stmt->bind_param("i", $_SESSION['user_id']);
+                    $stmt->execute();
+                    $rentals = $stmt->get_result();
+
+                    if ($rentals->num_rows > 0):
+                        while ($rental = $rentals->fetch_assoc()):
                     ?>
                         <div class="flex items-center justify-between border-b pb-4">
                             <div>
                                 <h3 class="font-semibold text-gray-800">Machine Rental</h3>
                                 <p class="text-sm text-gray-600">
-                                    Rented on <?php echo date('M j, Y', strtotime($activity['rental_date'])); ?>
+                                    Rented on <?php echo date('M j, Y', strtotime($rental['created_at'])); ?>
                                 </p>
                             </div>
                             <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
-                                ₹<?php echo number_format($activity['total_amount']); ?>
+                                ₹<?php echo number_format($rental['total_amount']); ?>
                             </span>
                         </div>
                     <?php 

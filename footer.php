@@ -22,9 +22,9 @@
             <div class="mb-6">
                 <h3 class="text-lg font-semibold mb-4">Contact Us</h3>
                 <ul class="space-y-2 text-gray-400">
-                    <li>Email: info@gearequip.com</li>
-                    <li>Phone: +1 (555) 123-4567</li>
-                    <li>Address: 123 Industrial Ave,<br>Business District, ST 12345</li>
+                    <li>Email: gearequip@gmail.com</li>
+                    <li>Phone: +91 9446543476</li>
+                    <li>Address: Gear Equip Kalayil Brothers,<br>Kanjirappally Kottayam, 686570</li>
                 </ul>
             </div>
 

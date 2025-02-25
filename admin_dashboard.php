@@ -24,8 +24,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['user_id'])) {
     }
 }
 
-// Fetch all users except current admin
-$sql = "SELECT user_id, full_name, email, role, created_at FROM users WHERE user_id != ?";
+// First, verify if status column exists
+$check_column = $conn->query("SHOW COLUMNS FROM users LIKE 'status'");
+if ($check_column->num_rows == 0) {
+    // If status column doesn't exist, create it
+    $conn->query("ALTER TABLE users ADD COLUMN status VARCHAR(20) DEFAULT 'active'");
+}
+
+// Now fetch all users
+$sql = "SELECT user_id, full_name, email, role, created_at, status FROM users WHERE user_id != ?";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("i", $_SESSION['user_id']);
 $stmt->execute();
@@ -38,98 +45,117 @@ $users = $stmt->get_result();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - GEAR EQUIP</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body class="bg-gray-50">
-    <header class="bg-white shadow-md fixed top-0 left-0 right-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+<body class="bg-gray-100">
+    <!-- Side Navigation -->
+    <div class="fixed left-0 top-0 w-64 h-full bg-white shadow-lg">
+        <!-- Logo Section -->
+        <div class="p-4 border-b">
             <div class="flex items-center space-x-3">
-                <img src="images/logo.png" alt="GEAR EQUIP" class="h-10">
+                <img src="images/logo.png" alt="GEAR EQUIP" class="h-8">
                 <span class="text-xl font-bold text-gray-800">GEAR EQUIP</span>
             </div>
-            <div class="flex items-center space-x-4">
-                <span class="text-gray-600">Welcome, <?php echo htmlspecialchars($_SESSION['full_name']); ?></span>
-                <a href="logout.php" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">Logout</a>
-            </div>
         </div>
-    </header>
+        
+        <!-- Admin Info -->
+        <div class="p-4 border-b">
+            <p class="text-sm text-gray-500">Welcome,</p>
+            <p class="font-semibold text-gray-800"><?php echo htmlspecialchars($_SESSION['full_name']); ?></p>
+        </div>
 
-    <div class="max-w-7xl mx-auto px-4 py-16 mt-20">
+        <!-- Navigation Links -->
+        <nav class="p-4">
+            <div class="space-y-2">
+                <a href="admin_dashboard.php" class="block px-4 py-2 rounded-lg bg-blue-50 text-blue-700 font-medium">
+                    <i class="fas fa-home mr-3"></i>Overview
+                </a>
+                <a href="admin_users.php" class="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
+                    <i class="fas fa-users mr-3"></i>Users Management
+                </a>
+                <a href="admin_managers.php" class="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
+                    <i class="fas fa-user-tie mr-3"></i>Managers
+                </a>
+                <a href="admin_machines.php" class="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
+                    <i class="fas fa-cogs mr-3"></i>Machines
+                </a>
+                <a href="admin_income.php" class="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
+                    <i class="fas fa-chart-line mr-3"></i>Income
+                </a>
+                <a href="admin_profile.php" class="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
+                    <i class="fas fa-user-cog mr-3"></i>Profile Settings
+                </a>
+            </div>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="ml-64 p-8">
+        <!-- Top Header -->
         <div class="flex justify-between items-center mb-8">
-            <h1 class="text-3xl font-bold text-gray-800">Admin Dashboard</h1>
+            <h1 class="text-2xl font-bold text-gray-800">Dashboard Overview</h1>
+            <a href="logout.php" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
+                Logout
+            </a>
         </div>
 
-        <?php if (isset($success_message)): ?>
-            <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
-                <?php echo $success_message; ?>
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-gray-500 text-sm font-medium">Total Users</h3>
+                <p class="text-3xl font-bold text-gray-800">
+                    <?php 
+                    $result = mysqli_query($conn, "SELECT COUNT(*) as count FROM users WHERE role = 'user'");
+                    $row = mysqli_fetch_assoc($result);
+                    echo $row['count'];
+                    ?>
+                </p>
             </div>
-        <?php endif; ?>
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-gray-500 text-sm font-medium">Total Managers</h3>
+                <p class="text-3xl font-bold text-gray-800">
+                    <?php 
+                    $result = mysqli_query($conn, "SELECT COUNT(*) as count FROM users WHERE role = 'manager'");
+                    $row = mysqli_fetch_assoc($result);
+                    echo $row['count'];
+                    ?>
+                </p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-gray-500 text-sm font-medium">Total Machines</h3>
+                <p class="text-3xl font-bold text-gray-800">
+                    <?php 
+                    $result = mysqli_query($conn, "SELECT COUNT(*) as count FROM machines");
+                    $row = mysqli_fetch_assoc($result);
+                    echo $row['count'];
+                    ?>
+                </p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-gray-500 text-sm font-medium">Total Revenue</h3>
+                <p class="text-3xl font-bold text-gray-800">₹
+                    <?php 
+                    $result = mysqli_query($conn, "SELECT SUM(total_amount) as total FROM rentals WHERE status = 'paid'");
+                    $row = mysqli_fetch_assoc($result);
+                    echo number_format($row['total'] ?? 0);
+                    ?>
+                </p>
+            </div>
+        </div>
 
-        <?php if (isset($error_message)): ?>
-            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-                <?php echo $error_message; ?>
+        <!-- Recent Activity -->
+        <div class="bg-white rounded-lg shadow">
+            <div class="p-6 border-b">
+                <h2 class="text-xl font-semibold text-gray-800">Recent Activity</h2>
             </div>
-        <?php endif; ?>
-
-        <div class="bg-white rounded-lg shadow-lg overflow-hidden">
-            <div class="p-6 bg-gray-50 border-b border-gray-200">
-                <h2 class="text-xl font-semibold text-gray-800">User Management</h2>
-                <p class="text-gray-600">Manage user roles and permissions</p>
+            <div class="p-6">
+                <!-- Add your recent activity content here -->
             </div>
-            
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Current Role</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member Since</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    <?php while ($user = $users->fetch_assoc()): ?>
-                        <tr>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm font-medium text-gray-900">
-                                    <?php echo htmlspecialchars($user['full_name']); ?>
-                                </div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm text-gray-900">
-                                    <?php echo htmlspecialchars($user['email']); ?>
-                                </div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                    <?php echo $user['role'] == 'admin' ? 'bg-purple-100 text-purple-800' : 
-                                        ($user['role'] == 'manager' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'); ?>">
-                                    <?php echo ucfirst($user['role']); ?>
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                <?php echo date('M j, Y', strtotime($user['created_at'])); ?>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <form method="POST" action="" class="inline-flex items-center space-x-2">
-                                    <input type="hidden" name="user_id" value="<?php echo $user['user_id']; ?>">
-                                    <select name="role" class="text-sm border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                                        <option value="user" <?php echo $user['role'] == 'user' ? 'selected' : ''; ?>>User</option>
-                                        <option value="manager" <?php echo $user['role'] == 'manager' ? 'selected' : ''; ?>>Manager</option>
-                                    </select>
-                                    <button type="submit" class="bg-blue-500 text-white px-3 py-1 rounded-md text-sm hover:bg-blue-600">
-                                        Update Role
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
-                    <?php endwhile; ?>
-                </tbody>
-            </table>
         </div>
     </div>
 
-    <?php include 'footer.php'; ?>
+    <!-- Font Awesome for icons -->
+    <script src="https://kit.fontawesome.com/your-code.js" crossorigin="anonymous"></script>
 </body>
 </html>

@@ -22,6 +22,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         
         if ($row = mysqli_fetch_assoc($result)) {
             if (password_verify($password, $row['password'])) {
+                if ($row['status'] === 'inactive') {
+                    $_SESSION['error'] = "Your account has been deactivated. Please contact the administrator.";
+                    header('Location: login.php');
+                    exit();
+                }
                 $_SESSION['user_id'] = $row['user_id'];
                 $_SESSION['full_name'] = $row['full_name'];
                 $_SESSION['role'] = $row['role'];

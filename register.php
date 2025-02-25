@@ -14,6 +14,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $password = $_POST['password'];
     $confirm_password = $_POST['confirm_password'];
     
+    // Common weak passwords to prevent
+    $weak_passwords = [
+        'password123', 'admin123', '12345678', 'qwerty123',
+        'letmein123', 'welcome123', 'abc123456', '123456789'
+    ];
+    
     // Validation
     if (empty($full_name) || empty($email) || empty($password) || empty($confirm_password)) {
         $registration_error = "Please fill in all required fields";
@@ -21,27 +27,67 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $registration_error = "Please enter a valid email address";
     } elseif (strlen($password) < 8) {
         $registration_error = "Password must be at least 8 characters long";
+    } elseif (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/', $password)) {
+        $registration_error = "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character (@$!%*?&#)";
+    } elseif (in_array(strtolower($password), $weak_passwords)) {
+        $registration_error = "Please choose a stronger password. This password is too common.";
     } elseif ($password !== $confirm_password) {
         $registration_error = "Passwords do not match";
     } else {
-        // Check if email already exists
-        $check_email = mysqli_prepare($conn, "SELECT user_id FROM users WHERE email = ?");
-        mysqli_stmt_bind_param($check_email, "s", $email);
-        mysqli_stmt_execute($check_email);
-        mysqli_stmt_store_result($check_email);
-        
-        if (mysqli_stmt_num_rows($check_email) > 0) {
-            $registration_error = "This email is already registered";
-        } else {
-            // Insert new user
-            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = mysqli_prepare($conn, "INSERT INTO users (full_name, email, password, phone, role) VALUES (?, ?, ?, ?, 'user')");
-            mysqli_stmt_bind_param($stmt, "ssss", $full_name, $email, $hashed_password, $phone);
+        // Full Name Validation
+        if (empty($full_name)) {
+            // Check if name field is empty
+            $registration_error = "Full name is required";
+        } 
+        elseif (strlen($full_name) < 3 || strlen($full_name) > 50) {
+            // Check if name length is between 3 and 50 characters
+            $registration_error = "Full name must be between 3 and 50 characters";
+        } 
+        elseif (!preg_match('/^[a-zA-Z\s]+$/', $full_name)) {
+            // Check if name contains only letters and spaces
+            // preg_match uses regex:
+            // ^ - start of string
+            // [a-zA-Z\s] - only letters (both upper and lower case) and spaces allowed
+            // + - one or more characters
+            // $ - end of string
+            $registration_error = "Full name can only contain letters and spaces";
+        } 
+        elseif (str_word_count($full_name) < 2) {
+            // Check if name has at least two words (first and last name)
+            $registration_error = "Please enter your full name (first and last name)";
+        } 
+        else {
+            // Check if email already exists
+            $check_email = mysqli_prepare($conn, "SELECT user_id FROM users WHERE email = ?");
+            mysqli_stmt_bind_param($check_email, "s", $email);
+            mysqli_stmt_execute($check_email);
+            mysqli_stmt_store_result($check_email);
             
-            if (mysqli_stmt_execute($stmt)) {
-                $registration_success = "Registration successful! You can now <a href='login.php' style='color: #4a90e2; text-decoration: underline;'>login</a>.";
+            if (mysqli_stmt_num_rows($check_email) > 0) {
+                $registration_error = "This email is already registered";
             } else {
-                $registration_error = "Registration failed. Please try again.";
+                // Phone number validation
+                if (empty($phone)) {
+                    $registration_error = "Phone number is required";
+                }
+                // Check if phone starts with 6-9 and has exactly 10 digits
+                elseif (!preg_match('/^[6-9][0-9]{9}$/', $phone)) {
+                    $registration_error = "Phone number must start with 6-9 and be exactly 10 digits long";
+                }
+                
+                // If no phone errors, continue with rest of validation
+                if (empty($registration_error)) {
+                    // Insert new user
+                    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                    $stmt = mysqli_prepare($conn, "INSERT INTO users (full_name, email, password, phone, role) VALUES (?, ?, ?, ?, 'user')");
+                    mysqli_stmt_bind_param($stmt, "ssss", $full_name, $email, $hashed_password, $phone);
+                    
+                    if (mysqli_stmt_execute($stmt)) {
+                        $registration_success = "Registration successful! You can now <a href='login.php' style='color: #4a90e2; text-decoration: underline;'>login</a>.";
+                    } else {
+                        $registration_error = "Registration failed. Please try again.";
+                    }
+                }
             }
         }
     }
