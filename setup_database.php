@@ -116,9 +116,12 @@ $sql_rentals = "CREATE TABLE IF NOT EXISTS rentals (
     rental_id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,
     machine_id INT NOT NULL,
+    rental_days INT NOT NULL,
+    total_amount DECIMAL(10,2) NOT NULL,
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
     status ENUM('pending', 'active', 'completed', 'cancelled') DEFAULT 'pending',
+    payment_id VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id),
     FOREIGN KEY (machine_id) REFERENCES machines(machine_id)

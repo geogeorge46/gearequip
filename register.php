@@ -83,7 +83,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     mysqli_stmt_bind_param($stmt, "ssss", $full_name, $email, $hashed_password, $phone);
                     
                     if (mysqli_stmt_execute($stmt)) {
-                        $registration_success = "Registration successful! You can now <a href='login.php' style='color: #4a90e2; text-decoration: underline;'>login</a>.";
+                        // Redirect to login page immediately after successful registration
+                        header("Location: login.php");
+                        exit();
                     } else {
                         $registration_error = "Registration failed. Please try again.";
                     }
@@ -274,7 +276,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
                 <div class="form-group">
                     <label for="phone">Phone Number</label>
-                    <input type="tel" id="phone" name="phone" value="<?php echo isset($_POST['phone']) ? htmlspecialchars($_POST['phone']) : ''; ?>">
+                    <input type="tel" 
+                           id="phone" 
+                           name="phone" 
+                           pattern="[6-9][0-9]{9}"
+                           maxlength="10"
+                           placeholder="Enter 10 digit mobile number"
+                           title="Please enter valid 10 digit mobile number starting with 6-9"
+                           value="<?php echo isset($_POST['phone']) ? htmlspecialchars($_POST['phone']) : ''; ?>"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                           required>
+                    <div id="phone-error" class="text-red-500 text-sm mt-1"></div>
                 </div>
 
                 <div class="form-group">
@@ -332,27 +344,149 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
 
         // Helper function to check if phone is valid
-        function isValidPhone(phone) {
-            const re = /^[0-9]{10}$/;
-            return re.test(phone);
+        function validatePhone() {
+            const phoneInput = document.getElementById('phone');
+            const phoneError = document.getElementById('phone-error');
+            let value = phoneInput.value.trim();
+            
+            // Remove any non-numeric characters
+            value = value.replace(/\D/g, '');
+            
+            // Check first digit
+            if (value.length > 0) {
+                const firstDigit = parseInt(value[0]);
+                if (firstDigit < 6 || firstDigit > 9) {
+                    phoneError.textContent = 'Phone number must start with 6, 7, 8, or 9';
+                    phoneInput.classList.add('border-red-400');
+                    phoneInput.classList.remove('border-green-400');
+                    phoneInput.value = ''; // Clear invalid input
+                    return false;
+                } else {
+                    // Check length
+                    if (value.length !== 10) {
+                        phoneError.textContent = 'Phone number must be 10 digits';
+                        phoneInput.classList.add('border-red-400');
+                        phoneInput.classList.remove('border-green-400');
+                    } else {
+                        phoneError.textContent = '';
+                        phoneInput.classList.remove('border-red-400');
+                        phoneInput.classList.add('border-green-400');
+                        return true;
+                    }
+                }
+            } else {
+                phoneError.textContent = '';
+                phoneInput.classList.remove('border-red-400', 'border-green-400');
+            }
+            
+            // Limit to 10 digits and update input value
+            this.value = value.substring(0, 10);
+            return value.length === 10;
         }
 
-        // Validate full name
+        // Replace the existing validateFullName function with this updated version
         function validateFullName() {
             const fullNameInput = document.getElementById('full_name');
             const fullName = fullNameInput.value.trim();
+            const formGroup = fullNameInput.parentElement;
+            const errorDiv = formGroup.querySelector('.error-text') || document.createElement('div');
+            errorDiv.className = 'error-text';
+            errorDiv.style.color = '#e74c3c';
+            errorDiv.style.fontSize = '12px';
+            errorDiv.style.marginTop = '5px';
 
+            // Check if name is empty
             if (fullName === '') {
-                showError(fullNameInput, 'Full name is required');
+                errorDiv.textContent = 'Full name is required';
+                fullNameInput.style.borderColor = '#e74c3c';
+                if (!formGroup.querySelector('.error-text')) {
+                    formGroup.appendChild(errorDiv);
+                }
                 return false;
-            } else if (fullName.length < 2) {
-                showError(fullNameInput, 'Full name must be at least 2 characters');
-                return false;
-            } else {
-                showSuccess(fullNameInput);
-                return true;
             }
+
+            // Check if name contains only letters and spaces
+            if (!/^[a-zA-Z\s]+$/.test(fullName)) {
+                errorDiv.textContent = 'Full name can only contain letters and spaces';
+                fullNameInput.style.borderColor = '#e74c3c';
+                if (!formGroup.querySelector('.error-text')) {
+                    formGroup.appendChild(errorDiv);
+                }
+                return false;
+            }
+
+            // Split the name into words
+            const nameWords = fullName.split(' ').filter(word => word.length > 0);
+
+            // Check if there are at least two words (first and last name)
+            if (nameWords.length < 2) {
+                errorDiv.textContent = 'Please enter both first and last name';
+                fullNameInput.style.borderColor = '#e74c3c';
+                if (!formGroup.querySelector('.error-text')) {
+                    formGroup.appendChild(errorDiv);
+                }
+                return false;
+            }
+
+            // Check if each word is at least 2 characters long
+            for (let word of nameWords) {
+                if (word.length < 2) {
+                    errorDiv.textContent = 'Each name should be at least 2 characters long';
+                    fullNameInput.style.borderColor = '#e74c3c';
+                    if (!formGroup.querySelector('.error-text')) {
+                        formGroup.appendChild(errorDiv);
+                    }
+                    return false;
+                }
+            }
+
+            // Check total length
+            if (fullName.length > 50) {
+                errorDiv.textContent = 'Full name must be less than 50 characters';
+                fullNameInput.style.borderColor = '#e74c3c';
+                if (!formGroup.querySelector('.error-text')) {
+                    formGroup.appendChild(errorDiv);
+                }
+                return false;
+            }
+
+            // If all validations pass
+            if (formGroup.querySelector('.error-text')) {
+                formGroup.removeChild(errorDiv);
+            }
+            fullNameInput.style.borderColor = '#2ecc71';
+            return true;
         }
+
+        // Replace the existing full name event listener with this updated version
+        document.getElementById('full_name').addEventListener('input', function() {
+            const formGroup = this.parentElement;
+            const errorDiv = formGroup.querySelector('.error-text') || document.createElement('div');
+            errorDiv.className = 'error-text';
+            errorDiv.style.color = '#e74c3c';
+            errorDiv.style.fontSize = '12px';
+            errorDiv.style.marginTop = '5px';
+
+            // Get the input value and remove extra spaces
+            let value = this.value.replace(/\s+/g, ' ');
+            
+            // Only allow letters and spaces
+            value = value.replace(/[^a-zA-Z\s]/g, '');
+            
+            // Update input value
+            this.value = value;
+
+            // Clear any previous error styling
+            if (formGroup.querySelector('.error-text')) {
+                formGroup.removeChild(errorDiv);
+            }
+            this.style.borderColor = '';
+
+            // If there's a space (indicating they're entering last name), validate
+            if (value.includes(' ')) {
+                validateFullName();
+            }
+        });
 
         // Validate email
         function validateEmail() {
@@ -367,20 +501,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 return false;
             } else {
                 showSuccess(emailInput);
-                return true;
-            }
-        }
-
-        // Validate phone
-        function validatePhone() {
-            const phoneInput = document.getElementById('phone');
-            const phone = phoneInput.value.trim();
-
-            if (phone !== '' && !isValidPhone(phone)) {
-                showError(phoneInput, 'Please enter a valid 10-digit phone number');
-                return false;
-            } else {
-                showSuccess(phoneInput);
                 return true;
             }
         }
@@ -482,6 +602,42 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             } else {
                 strengthIndicator.style.backgroundColor = '#2ecc71';
             }
+        });
+
+        // Add this new event listener for live validation
+        document.getElementById('phone').addEventListener('input', function() {
+            let value = this.value;
+            
+            // Remove any non-numeric characters
+            value = value.replace(/\D/g, '');
+            
+            // Check first digit
+            if (value.length > 0) {
+                const firstDigit = parseInt(value[0]);
+                if (firstDigit < 6 || firstDigit > 9) {
+                    document.getElementById('phone-error').textContent = 'Phone number must start with 6, 7, 8, or 9';
+                    this.classList.add('border-red-400');
+                    this.classList.remove('border-green-400');
+                    value = ''; // Clear invalid input
+                } else {
+                    // Check length
+                    if (value.length !== 10) {
+                        document.getElementById('phone-error').textContent = 'Phone number must be 10 digits';
+                        this.classList.add('border-red-400');
+                        this.classList.remove('border-green-400');
+                    } else {
+                        document.getElementById('phone-error').textContent = '';
+                        this.classList.remove('border-red-400');
+                        this.classList.add('border-green-400');
+                    }
+                }
+            } else {
+                document.getElementById('phone-error').textContent = '';
+                this.classList.remove('border-red-400', 'border-green-400');
+            }
+            
+            // Limit to 10 digits and update input value
+            this.value = value.substring(0, 10);
         });
     </script>
 </body>

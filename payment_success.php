@@ -1,4 +1,13 @@
-<?php session_start(); ?>
+<?php
+include 'config.php';
+session_start();
+
+if (!isset($_SESSION['user_id'])) {
+    header('Location: login.php');
+    exit();
+}
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,19 +16,21 @@
     <title>Payment Success - GEAR EQUIP</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center">
-    <div class="max-w-md w-full mx-4">
-        <div class="bg-white rounded-lg shadow-md p-8 text-center">
-            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+<body class="bg-gray-100">
+    <?php include 'nav.php'; ?>
+
+    <div class="max-w-4xl mx-auto px-4 py-16 mt-20 text-center">
+        <div class="bg-white rounded-lg shadow-md p-8">
+            <div class="text-green-500 mb-4">
+                <svg class="w-20 h-20 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                 </svg>
             </div>
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">Payment Successful!</h2>
-            <p class="text-gray-600 mb-6">Your rental payment has been processed successfully.</p>
+            <h1 class="text-3xl font-bold mb-4">Payment Successful!</h1>
+            <p class="text-gray-600 mb-8">Your rental order has been confirmed.</p>
             <a href="dashboard.php" 
-               class="inline-block bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition">
-                Back to Dashboard
+               class="bg-blue-600 text-white py-2 px-6 rounded-lg font-semibold hover:bg-blue-700 transition duration-300">
+                View My Rentals
             </a>
         </div>
     </div>

@@ -70,35 +70,40 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
     }
 
-    // Prepare the SQL statement
-    $insert_query = "INSERT INTO machines (name, daily_rate, image_url, status, description, available_count) VALUES (?, ?, ?, ?, ?, ?)";
-    $stmt = $conn->prepare($insert_query);
+    // Start transaction
+    $conn->begin_transaction();
 
-    if (!$stmt) {
-        echo "Error preparing statement: " . $conn->error;
-        exit();
-    }
-
-    $available_count = 1; // Set initial available count to 1
-    
-    // Bind parameters
-    $stmt->bind_param("sdsssi", $name, $daily_rate, $image_url, $status, $description, $available_count);
-    
-    // Execute the statement
-    if ($stmt->execute()) {
-        $machine_id = $stmt->insert_id;
+    try {
+        // Insert into machines table
+        $insert_query = "INSERT INTO machines (name, daily_rate, image_url, status, description, available_count) 
+                        VALUES (?, ?, ?, ?, ?, ?)";
+        $stmt = $conn->prepare($insert_query);
         
-        // Insert categories
-        foreach ($selected_categories as $category_id) {
-            $link_query = "INSERT INTO machine_categories (machine_id, category_id) VALUES (?, ?)";
-            $link_stmt = $conn->prepare($link_query);
-            $link_stmt->bind_param("ii", $machine_id, $category_id);
-            $link_stmt->execute();
+        $available_count = 1;
+        $stmt->bind_param("sdsssi", $name, $daily_rate, $image_url, $status, $description, $available_count);
+        
+        if ($stmt->execute()) {
+            $machine_id = $stmt->insert_id;
+            
+            // Insert categories into machine_categories table
+            if (!empty($selected_categories)) {
+                $category_insert = "INSERT INTO machine_categories (machine_id, category_id) VALUES (?, ?)";
+                $category_stmt = $conn->prepare($category_insert);
+                
+                foreach ($selected_categories as $category_id) {
+                    $category_stmt->bind_param("ii", $machine_id, $category_id);
+                    $category_stmt->execute();
+                }
+            }
+            
+            $conn->commit();
+            $_SESSION['success_message'] = "Machine added successfully!";
+            header('Location: manager_dashboard.php');
+            exit();
         }
-        
-        $_SESSION['success_message'] = "Machine added successfully!";
-        header('Location: manager_dashboard.php');
-        exit();
+    } catch (Exception $e) {
+        $conn->rollback();
+        $_SESSION['error_message'] = "Error adding machine: " . $e->getMessage();
     }
 }
 
@@ -136,14 +141,22 @@ if (isset($_SESSION['success_message'])) {
 
 <div class="max-w-7xl mx-auto px-4 py-16 mt-20">
     <h2 class="text-2xl font-bold mb-6">Add New Machine</h2>
-    <form id="addMachineForm" action="add_machine.php" method="POST" enctype="multipart/form-data" class="bg-white p-6 rounded-lg shadow-md">
+    <form id="addMachineForm" action="add_machine.php" method="POST" enctype="multipart/form-data" class="bg-white p-6 rounded-lg shadow-md" onsubmit="return false;">
         <div class="mb-4">
             <label for="name" class="block text-sm font-medium text-gray-700">Machine Name</label>
             <input type="text" name="name" id="name" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
         </div>
         <div class="mb-4">
-            <label for="daily_rate" class="block text-sm font-medium text-gray-700">Daily Rate</label>
-            <input type="number" name="daily_rate" id="daily_rate" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" step="0.01">
+            <label for="daily_rate" class="block text-sm font-medium text-gray-700">Daily Rate (₹)</label>
+            <input type="number" 
+                   name="daily_rate" 
+                   id="daily_rate" 
+                   required 
+                   min="50" 
+                   max="10000" 
+                   class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" 
+                   step="0.01">
+            <p class="text-sm text-gray-500 mt-1">Rate must be between ₹50 and ₹10,000</p>
         </div>
         <div class="mb-4">
             <label for="image" class="block text-sm font-medium text-gray-700">Upload Image</label>
@@ -165,8 +178,15 @@ if (isset($_SESSION['success_message'])) {
             <label class="block text-sm font-medium text-gray-700">Categories</label>
             <?php foreach ($categories as $category): ?>
                 <div class="flex items-center mb-2">
-                    <input type="checkbox" name="category_ids[]" value="<?php echo $category['category_id']; ?>" id="category_<?php echo $category['category_id']; ?>" class="mr-2">
-                    <label for="category_<?php echo $category['category_id']; ?>" class="text-sm text-gray-600"><?php echo htmlspecialchars($category['category_name']); ?></label>
+                    <input type="checkbox" 
+                           name="category_ids[]" 
+                           value="<?php echo $category['category_id']; ?>" 
+                           id="category_<?php echo $category['category_id']; ?>" 
+                           class="mr-2">
+                    <label for="category_<?php echo $category['category_id']; ?>" 
+                           class="text-sm text-gray-600">
+                        <?php echo htmlspecialchars($category['category_name']); ?>
+                    </label>
                 </div>
             <?php endforeach; ?>
         </div>
@@ -174,10 +194,17 @@ if (isset($_SESSION['success_message'])) {
     </form>
 </div>
 
-<!-- Add this JavaScript code before closing body tag -->
+<!-- Add this JavaScript before the closing body tag -->
 <script>
 document.getElementById('addMachineForm').addEventListener('submit', function(e) {
-    e.preventDefault(); // Prevent default form submission
+    const dailyRate = parseFloat(document.getElementById('daily_rate').value);
+    
+    // Validate daily rate
+    if (dailyRate < 50 || dailyRate > 10000) {
+        e.preventDefault();
+        alert('Daily rate must be between ₹50 and ₹10,000');
+        return;
+    }
     
     // Create FormData object from the form
     const formData = new FormData(this);
@@ -190,12 +217,32 @@ document.getElementById('addMachineForm').addEventListener('submit', function(e)
     .then(response => response.text())
     .then(data => {
         console.log('Machine added successfully!');
-        // Redirect to manager dashboard
         window.location.href = 'manager_dashboard.php';
     })
     .catch(error => {
         console.error('Error:', error);
     });
+});
+
+// Add real-time validation
+document.getElementById('daily_rate').addEventListener('input', function() {
+    const value = parseFloat(this.value);
+    const errorMessage = document.createElement('p');
+    errorMessage.className = 'text-red-500 text-sm mt-1';
+    
+    // Remove any existing error message
+    const existingError = this.parentNode.querySelector('.text-red-500');
+    if (existingError) {
+        existingError.remove();
+    }
+    
+    if (value < 50) {
+        errorMessage.textContent = 'Daily rate cannot be less than ₹50';
+        this.parentNode.appendChild(errorMessage);
+    } else if (value > 10000) {
+        errorMessage.textContent = 'Daily rate cannot exceed ₹10,000';
+        this.parentNode.appendChild(errorMessage);
+    }
 });
 </script>
 

@@ -8,6 +8,10 @@ session_start();
 // Include navigation
 include 'nav.php';
 ?>
+
+<!-- Add more spacing after navigation -->
+<div style="margin-top: 120px;"></div>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -42,11 +46,65 @@ include 'nav.php';
             /* Style for when image fails to load */
             background-color: #f3f4f6;
         }
+        .machines-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            padding: 20px 0;
+        }
+
+        .machine-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+
+        .machine-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .machine-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        .machine-card h3 {
+            margin: 10px 0;
+            color: #333;
+        }
+
+        .machine-card .price {
+            color: #27ae60;
+            font-weight: bold;
+            font-size: 1.1em;
+            margin: 10px 0;
+        }
+
+        .machine-card button {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .machine-card button:hover {
+            background: #219a52;
+        }
     </style>
 </head>
 <body>
     <!-- Hero Section with Video Background -->
-    <section class="hero" id="home">
+    <section class="hero" id="home" style="margin-top: 120px;">
         <div class="video-container">
             <video autoplay loop muted playsinline id="myVideo">
                 <source src="images/bgfront.mp4" type="video/mp4">
@@ -245,18 +303,42 @@ include 'nav.php';
         </div>
     </section>
 
-    <!-- Footer -->
-     <?php  
-   include 'footer.php';
-   ?>
+    <!-- Add this section where you want the machines to appear -->
+    <section id="machines-section" style="display: none;">
+        <div class="container">
+            <h2>Our Machines</h2>
+            <div class="machines-grid">
+                <?php
+                // Fetch machines from database
+                $query = "SELECT * FROM machines WHERE status = 'available'";
+                $result = mysqli_query($conn, $query);
 
-    <!-- Add this JavaScript to handle image errors -->
+                while($machine = mysqli_fetch_assoc($result)) { ?>
+                    <div class="machine-card">
+                        <?php if($machine['image_url']): ?>
+                            <img src="<?php echo htmlspecialchars($machine['image_url']); ?>" alt="<?php echo htmlspecialchars($machine['name']); ?>">
+                        <?php endif; ?>
+                        <h3><?php echo htmlspecialchars($machine['name']); ?></h3>
+                        <p class="price">₹<?php echo number_format($machine['daily_rate'], 2); ?> / day</p>
+                        <p class="status">Status: <?php echo htmlspecialchars($machine['status']); ?></p>
+                        <button onclick="viewMachineDetails(<?php echo $machine['machine_id']; ?>)">View Details</button>
+                    </div>
+                <?php } ?>
+            </div>
+        </div>
+    </section>
+
+    <!-- Add this JavaScript to handle the showing/hiding -->
     <script>
-    function handleImageError(img) {
-        img.onerror = null; // Prevent infinite loop
-        img.src = 'images/default-machine.jpg';
-        img.classList.add('error');
+   
+
+    function viewMachineDetails(machineId) {
+        // Handle viewing machine details
+        // You could show a modal or redirect to a details page
     }
     </script>
+
+    <!-- Footer -->
+    <?php include 'footer.php'; ?>
 </body>
 </html>

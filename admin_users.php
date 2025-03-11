@@ -131,7 +131,7 @@ $users = $stmt->get_result();
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <button onclick="toggleUserStatus(<?php echo $user['user_id']; ?>, '<?php echo $user['status']; ?>')"
                                         class="px-3 py-1 rounded-full text-sm font-semibold 
-                                        <?php echo $user['status'] == 'active' ? 
+                                        <?php echo ($user['status'] === 'active') ? 
                                             'bg-green-100 text-green-800' : 
                                             'bg-red-100 text-red-800'; ?>">
                                     <?php echo ucfirst($user['status'] ?? 'active'); ?>
@@ -175,12 +175,12 @@ $users = $stmt->get_result();
                 },
                 body: `user_id=${userId}&status=${newStatus}`
             })
-            .then(response => response.text())
+            .then(response => response.json())
             .then(data => {
-                if (data === 'success') {
+                if (data.success) {
                     location.reload();
                 } else {
-                    alert('Error updating user status');
+                    alert('Error updating user status: ' + data.message);
                 }
             })
             .catch(error => {
