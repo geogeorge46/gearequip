@@ -41,6 +41,10 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'manager') {
                 <a href="manager_dashboard.php" class="block px-4 py-2 rounded-lg bg-blue-50 text-blue-700 font-medium">
                     <i class="fas fa-home mr-3"></i>Overview
                 </a>
+                
+                <a href="managerstore.php" class="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
+                <i class="fas fa-store mr-3"></i>Store
+                </a>
                 <a href="available_machines.php" class="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
                     <i class="fas fa-cogs mr-3"></i>Available Machines
                 </a>
@@ -72,6 +76,9 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'manager') {
                 Logout
             </a>
         </div>
+
+        
+        
 
         <!-- Stats Cards -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">

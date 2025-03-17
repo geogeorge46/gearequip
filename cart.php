@@ -91,7 +91,12 @@ $total = 0;
     <?php include 'nav.php'; ?>
 
     <div class="cart-container">
-        <h1 class="text-3xl font-bold mb-8">Your Cart</h1>
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold">Your Cart</h1>
+            <a href="machines.php" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                Back to Machines
+            </a>
+        </div>
 
         <?php if (isset($_SESSION['success'])): ?>
             <div class="bg-green-100 text-green-700 p-4 mb-4 rounded">

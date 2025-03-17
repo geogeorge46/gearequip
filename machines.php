@@ -17,6 +17,21 @@ if ($selected_category) {
     mysqli_stmt_execute($stmt);
     $machines_result = mysqli_stmt_get_result($stmt);
 }
+
+// Query to fetch machines with their categories
+$query = "SELECT m.*, c.category_name 
+          FROM machines m 
+          LEFT JOIN machine_categories mc ON m.machine_id = mc.machine_id 
+          LEFT JOIN categories c ON mc.category_id = c.category_id 
+          ORDER BY m.created_at DESC";
+
+$result = $conn->query($query);
+$machines = [];
+if ($result) {
+    while ($row = $result->fetch_assoc()) {
+        $machines[] = $row;
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -340,7 +355,7 @@ if ($selected_category) {
             <h1 class="text-4xl font-bold text-center mb-8">Machine Categories</h1>
             <div class="categories-grid">
                 <?php while($category = mysqli_fetch_assoc($categories_result)): ?>
-                    <a href="?category=<?php echo $category['category_id']; ?>" class="category-card">
+                    <a href="display_machines.php?category=<?php echo $category['category_id']; ?>" class="category-card">
                         <img src="images/categories/<?php echo strtolower(str_replace(' ', '-', $category['category_name'])); ?>.jpg" 
                              alt="<?php echo htmlspecialchars($category['category_name']); ?>"
                              class="category-image">
