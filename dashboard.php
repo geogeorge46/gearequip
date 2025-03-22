@@ -29,95 +29,201 @@ $rentals = $stmt->get_result();
     <title>Dashboard - GEAR EQUIP</title>
     <link href="styles.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f3f4f6; /* Light background for the entire page */
+        }
+        .sidebar {
+            width: 250px;
+            background: linear-gradient(180deg, #f8fafc, #e5e7eb); /* Gradient background */
+            padding: 20px;
+            border-right: 1px solid #e5e7eb; /* Light border */
+            position: fixed; /* Fixed position */
+            height: calc(100% - 50px); /* Full height minus the top margin */
+            margin-top: 50px; /* Move down */
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+        }
+        .sidebar h2 {
+            font-size: 1.8rem; /* Increased font size */
+            margin-bottom: 20px;
+            text-align: center; /* Center align the title */
+            color:rgb(17, 17, 18); /* Emphasized color */
+        }
+        .sidebar a {
+            display: block;
+            padding: 12px; /* Increased padding */
+            margin-bottom: 10px;
+            color: #1f2937; /* Dark text */
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s, transform 0.3s; /* Added transform for hover */
+        }
+        .sidebar a:hover {
+            background-color: #d1fae5; /* Light hover effect */
+            transform: scale(1.05); /* Slightly enlarge on hover */
+        }
+        .content {
+            margin-left: 270px; /* Space for sidebar */
+            padding: 20px;
+            margin-top: 50px; /* Added margin to move content down */
+        }
+        .container {
+            background-color: white; /* White background for the content area */
+            border-radius: 8px; /* Rounded corners */
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* Shadow effect */
+            padding: 20px;
+        }
+        .summary-card {
+            background-color: #ffffff; /* White background */
+            border-radius: 8px; /* Rounded corners */
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Shadow effect */
+            transition: transform 0.3s, box-shadow 0.3s; /* Animation on hover */
+        }
+        .summary-card:hover {
+            transform: translateY(-5px); /* Lift effect on hover */
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); /* Deeper shadow on hover */
+        }
+        .summary-card h3 {
+            display: flex;
+            align-items: center;
+        }
+        .summary-card h3 i {
+            margin-right: 10px; /* Space between icon and text */
+            color: #2563eb; /* Icon color */
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse; /* Remove space between cells */
+            border-radius: 8px; /* Rounded corners */
+            overflow: hidden; /* Hide overflow for rounded corners */
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f9fafb; /* Light gray for header */
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f3f4f6; /* Alternating row colors */
+        }
+        tr:hover {
+            background-color: #e5e7eb; /* Highlight row on hover */
+        }
+        .button {
+            background: linear-gradient(90deg, #2563eb, #1d4ed8); /* Gradient background */
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px; /* Rounded corners */
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+        .button:hover {
+            transform: scale(1.05); /* Slightly enlarge on hover */
+        }
+    </style>
 </head>
 <body>
-    <?php include 'nav.php'; ?>
+    <div class="sidebar">
+        <h2>User Dashboard</h2>
+        <a href="user_rentals.php" class="active">User Rentals</a>
+        <a href="cart.php">Cart</a>
+        <a href="user_feedback.php">Feedback</a>
+    </div>
 
-    <div class="container mx-auto px-4 py-8 mt-32">
-        <!-- Add Book Equipment Button -->
-        <div class="flex justify-between items-center mb-8">
-            <h1 class="text-3xl font-bold">Welcome, <?php echo htmlspecialchars($_SESSION['full_name']); ?></h1>
-            <a href="index.php" 
-               class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg 
-                      transition duration-300 ease-in-out transform hover:scale-105">
-                Book Equipment
-            </a>
-        </div>
+    <div class="content">
+        <?php include 'nav.php'; ?>
 
-        <!-- Dashboard Summary -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div class="bg-white p-6 rounded-lg shadow">
-                <h3 class="text-xl font-semibold mb-2">Active Rentals</h3>
-                <p class="text-3xl text-blue-600">
-                    <?php 
-                    $active_rentals = mysqli_query($conn, 
-                        "SELECT COUNT(*) as count FROM rentals 
-                         WHERE user_id = $user_id AND status = 'active'");
-                    $count = mysqli_fetch_assoc($active_rentals);
-                    echo $count['count'];
-                    ?>
-                </p>
+        <div class="container mx-auto px-4 py-8 mt-32">
+            <!-- Add Book Equipment Button -->
+            <div class="flex justify-between items-center mb-8">
+                <h1 class="text-3xl font-bold">Welcome, <?php echo htmlspecialchars($_SESSION['full_name']); ?></h1>
+                <a href="index.php" 
+                   class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg 
+                          transition duration-300 ease-in-out transform hover:scale-105">
+                    Book Equipment
+                </a>
             </div>
-            
-            <div class="bg-white p-6 rounded-lg shadow">
-                <h3 class="text-xl font-semibold mb-2">Total Spent</h3>
-                <p class="text-3xl text-green-600">₹
-                    <?php 
-                    $total_spent = mysqli_query($conn, 
-                        "SELECT SUM(total_amount) as total FROM rentals 
-                         WHERE user_id = $user_id AND status != 'cancelled'");
-                    $total = mysqli_fetch_assoc($total_spent);
-                    echo number_format($total['total'] ?? 0, 2);
-                    ?>
-                </p>
-            </div>
-            
-            <div class="bg-white p-6 rounded-lg shadow">
-                <h3 class="text-xl font-semibold mb-2">Completed Rentals</h3>
-                <p class="text-3xl text-purple-600">
-                    <?php 
-                    $completed_rentals = mysqli_query($conn, 
-                        "SELECT COUNT(*) as count FROM rentals 
-                         WHERE user_id = $user_id AND status = 'completed'");
-                    $completed = mysqli_fetch_assoc($completed_rentals);
-                    echo $completed['count'];
-                    ?>
-                </p>
-            </div>
-        </div>
 
-        <!-- Recent Rentals -->
-        <h2 class="text-2xl font-bold mb-4">Recent Rentals</h2>
-        <div class="bg-white rounded-lg shadow overflow-hidden">
-            <table class="min-w-full">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Machine</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Start Date</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">End Date</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200">
-                    <?php while ($rental = $rentals->fetch_assoc()): ?>
-                    <tr>
-                        <td class="px-6 py-4"><?php echo htmlspecialchars($rental['machine_name']); ?></td>
-                        <td class="px-6 py-4"><?php echo date('M d, Y', strtotime($rental['start_date'])); ?></td>
-                        <td class="px-6 py-4"><?php echo date('M d, Y', strtotime($rental['end_date'])); ?></td>
-                        <td class="px-6 py-4">₹<?php echo number_format($rental['total_amount'], 2); ?></td>
-                        <td class="px-6 py-4">
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                <?php echo $rental['status'] == 'active' ? 'bg-green-100 text-green-800' : 
-                                    ($rental['status'] == 'completed' ? 'bg-blue-100 text-blue-800' : 
-                                    'bg-gray-100 text-gray-800'); ?>">
-                                <?php echo ucfirst($rental['status']); ?>
-                            </span>
-                        </td>
-                    </tr>
-                    <?php endwhile; ?>
-                </tbody>
-            </table>
+            <!-- Dashboard Summary -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="bg-white p-6 rounded-lg shadow">
+                    <h3 class="text-xl font-semibold mb-2">Active Rentals</h3>
+                    <p class="text-3xl text-blue-600">
+                        <?php 
+                        $active_rentals = mysqli_query($conn, 
+                            "SELECT COUNT(*) as count FROM rentals 
+                             WHERE user_id = $user_id AND status = 'active'");
+                        $count = mysqli_fetch_assoc($active_rentals);
+                        echo $count['count'];
+                        ?>
+                    </p>
+                </div>
+                
+                <div class="bg-white p-6 rounded-lg shadow">
+                    <h3 class="text-xl font-semibold mb-2">Total Spent</h3>
+                    <p class="text-3xl text-green-600">₹
+                        <?php 
+                        $total_spent = mysqli_query($conn, 
+                            "SELECT SUM(total_amount) as total FROM rentals 
+                             WHERE user_id = $user_id AND status != 'cancelled'");
+                        $total = mysqli_fetch_assoc($total_spent);
+                        echo number_format($total['total'] ?? 0, 2);
+                        ?>
+                    </p>
+                </div>
+                
+                <div class="bg-white p-6 rounded-lg shadow">
+                    <h3 class="text-xl font-semibold mb-2">Completed Rentals</h3>
+                    <p class="text-3xl text-purple-600">
+                        <?php 
+                        $completed_rentals = mysqli_query($conn, 
+                            "SELECT COUNT(*) as count FROM rentals 
+                             WHERE user_id = $user_id AND status = 'completed'");
+                        $completed = mysqli_fetch_assoc($completed_rentals);
+                        echo $completed['count'];
+                        ?>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Recent Rentals -->
+            <h2 class="text-2xl font-bold mb-4">Recent Rentals</h2>
+            <div class="bg-white rounded-lg shadow overflow-hidden">
+                <table class="min-w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Machine</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Start Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">End Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        <?php while ($rental = $rentals->fetch_assoc()): ?>
+                        <tr>
+                            <td class="px-6 py-4"><?php echo htmlspecialchars($rental['machine_name']); ?></td>
+                            <td class="px-6 py-4"><?php echo date('M d, Y', strtotime($rental['start_date'])); ?></td>
+                            <td class="px-6 py-4"><?php echo date('M d, Y', strtotime($rental['end_date'])); ?></td>
+                            <td class="px-6 py-4">₹<?php echo number_format($rental['total_amount'], 2); ?></td>
+                            <td class="px-6 py-4">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                    <?php echo $rental['status'] == 'active' ? 'bg-green-100 text-green-800' : 
+                                        ($rental['status'] == 'completed' ? 'bg-blue-100 text-blue-800' : 
+                                        'bg-gray-100 text-gray-800'); ?>">
+                                    <?php echo ucfirst($rental['status']); ?>
+                                </span>
+                            </td>
+                        </tr>
+                        <?php endwhile; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </body>

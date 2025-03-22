@@ -41,11 +41,7 @@ INSERT INTO `categories` (`category_id`, `category_name`, `description`) VALUES
 (1, 'Agricultural', 'Farm and agriculture related machinery'),
 (2, 'Commercial', 'Business and commercial use machinery'),
 (3, 'Manufacturing', 'Industrial and manufacturing equipment'),
-(4, 'Household', 'Home and domestic use equipment'),
-(5, 'Agricultural', 'Farm and agriculture related machinery'),
-(6, 'Commercial', 'Business and commercial use machinery'),
-(7, 'Manufacturing', 'Industrial and manufacturing equipment'),
-(8, 'Household', 'Home and domestic use equipment');
+(4, 'Household', 'Home and domestic use equipment');
 
 -- --------------------------------------------------------
 

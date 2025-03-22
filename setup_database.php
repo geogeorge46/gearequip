@@ -100,7 +100,7 @@ $sql_machines = "CREATE TABLE IF NOT EXISTS machines (
     category_id INT,
     daily_rate DECIMAL(10,2) NOT NULL,
     status ENUM('available', 'rented', 'maintenance') DEFAULT 'available',
-    image_url VARCHAR(255),
+    image_url VARCHAR(255), 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (category_id) REFERENCES categories(category_id)
 )";

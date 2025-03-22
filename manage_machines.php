@@ -23,7 +23,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $subcategory_id = mysqli_real_escape_string($conn, $_POST['subcategory_id']);
         $model_number = mysqli_real_escape_string($conn, $_POST['model_number']);
         $manufacturer = mysqli_real_escape_string($conn, $_POST['manufacturer']);
-        $available_count = mysqli_real_escape_string($conn, $_POST['available_count']);
+        $manufacturing_year = mysqli_real_escape_string($conn, $_POST['manufacturing_year']);
+        $purchase_date = mysqli_real_escape_string($conn, $_POST['purchase_date']);
+        $purchase_price = mysqli_real_escape_string($conn, $_POST['purchase_price']);
+        $maintenance_interval = mysqli_real_escape_string($conn, $_POST['maintenance_interval']);
+        $next_maintenance_date = mysqli_real_escape_string($conn, $_POST['next_maintenance_date']);
         
         // Handle image upload
         $image_url = '';
@@ -33,25 +37,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             move_uploaded_file($_FILES["image_url"]["tmp_name"], $image_url);
         }
         
-        // First insert the machine
+        // Insert the machine
         $query = "INSERT INTO machines (name, description, daily_rate, security_deposit, 
-                  category_id, subcategory_id, model_number, manufacturer, 
+                  category_id, subcategory_id, model_number, manufacturer, manufacturing_year,
+                  purchase_date, purchase_price, maintenance_interval, next_maintenance_date,
                   image_url, status) 
                   VALUES ('$name', '$description', '$daily_rate', '$security_deposit', 
                   '$category_id', '$subcategory_id', '$model_number', '$manufacturer', 
-                  '$image_url', 'available')";
+                  '$manufacturing_year', '$purchase_date', '$purchase_price', 
+                  '$maintenance_interval', '$next_maintenance_date', '$image_url', 'available')";
         
         if (mysqli_query($conn, $query)) {
-            $machine_id = mysqli_insert_id($conn);
-            
-            // Then create individual units for this machine
-            for ($i = 1; $i <= $available_count; $i++) {
-                $unit_number = $model_number . "-" . str_pad($i, 3, "0", STR_PAD_LEFT);
-                $unit_query = "INSERT INTO machine_units (machine_id, unit_number, status) 
-                              VALUES ('$machine_id', '$unit_number', 'available')";
-                mysqli_query($conn, $unit_query);
-            }
-            $success_message = "Machine and $available_count units added successfully!";
+            $success_message = "Machine added successfully!";
         } else {
             $error_message = "Error adding machine: " . mysqli_error($conn);
         }
@@ -67,8 +64,26 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <title>Manage Machines - GEAR EQUIP</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Subcategory loading
+        $('#category_id').change(function() {
+            var category_id = $(this).val();
+            if(category_id) {
+                $.ajax({
+                    url: 'get_subcategories.php',
+                    type: 'POST',
+                    data: {category_id: category_id},
+                    success: function(response) {
+                        $('#subcategory_id').html(response);
+                    }
+                });
+            } else {
+                $('#subcategory_id').html('<option value="">Select Subcategory</option>');
+            }
+        });
+
         // Machine Name Validation
         const nameInput = document.querySelector('input[name="name"]');
         const nameError = document.createElement('span');
@@ -118,51 +133,135 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             }
         });
 
-        // Available Count Validation
-        const countInput = document.querySelector('input[name="available_count"]');
-        const countError = document.createElement('span');
-        countError.className = 'text-red-500 text-sm mt-1';
-        countInput.parentNode.appendChild(countError);
+        // Security Deposit Validation
+        const depositInput = document.querySelector('input[name="security_deposit"]');
+        const depositError = document.createElement('span');
+        depositError.className = 'text-red-500 text-sm mt-1';
+        depositInput.parentNode.appendChild(depositError);
 
-        countInput.addEventListener('input', function() {
-            const value = parseInt(this.value);
+        depositInput.addEventListener('input', function() {
+            const value = parseFloat(this.value);
             
             if (!this.value) {
-                countError.textContent = 'Available count is required';
+                depositError.textContent = 'Security deposit is required';
                 this.classList.add('border-red-500');
                 this.classList.remove('border-green-500');
-            } else if (isNaN(value) || value < 1) {
-                countError.textContent = 'Available count must be at least 1';
-                this.classList.add('border-red-500');
-                this.classList.remove('border-green-500');
-            } else if (value > 100) {  // Adding a reasonable upper limit
-                countError.textContent = 'Available count cannot exceed 100';
+            } else if (isNaN(value) || value <= 0) {
+                depositError.textContent = 'Security deposit must be greater than 0';
                 this.classList.add('border-red-500');
                 this.classList.remove('border-green-500');
             } else {
-                countError.textContent = '';
+                depositError.textContent = '';
                 this.classList.remove('border-red-500');
                 this.classList.add('border-green-500');
             }
         });
 
-        // Update form validation to include available count
+        // Manufacturer Validation
+        const manufacturerInput = document.querySelector('input[name="manufacturer"]');
+        const manufacturerError = document.createElement('span');
+        manufacturerError.className = 'text-red-500 text-sm mt-1';
+        manufacturerInput.parentNode.appendChild(manufacturerError);
+
+        manufacturerInput.addEventListener('input', function() {
+            const value = this.value;
+            const isValid = /^[a-zA-Z\s]+$/.test(value);
+            
+            if (!value) {
+                manufacturerError.textContent = 'Manufacturer name is required';
+                this.classList.add('border-red-500');
+                this.classList.remove('border-green-500');
+            } else if (!isValid) {
+                manufacturerError.textContent = 'Manufacturer name must contain only letters and spaces';
+                this.classList.add('border-red-500');
+                this.classList.remove('border-green-500');
+            } else {
+                manufacturerError.textContent = '';
+                this.classList.remove('border-red-500');
+                this.classList.add('border-green-500');
+            }
+        });
+
+        // Purchase Price Validation
+        const priceInput = document.querySelector('input[name="purchase_price"]');
+        const priceError = document.createElement('span');
+        priceError.className = 'text-red-500 text-sm mt-1';
+        priceInput.parentNode.appendChild(priceError);
+
+        priceInput.addEventListener('input', function() {
+            const value = parseFloat(this.value);
+            
+            if (!this.value) {
+                priceError.textContent = 'Purchase price is required';
+                this.classList.add('border-red-500');
+                this.classList.remove('border-green-500');
+            } else if (isNaN(value) || value <= 0) {
+                priceError.textContent = 'Purchase price must be greater than 0';
+                this.classList.add('border-red-500');
+                this.classList.remove('border-green-500');
+            } else {
+                priceError.textContent = '';
+                this.classList.remove('border-red-500');
+                this.classList.add('border-green-500');
+            }
+        });
+
+        // Maintenance Interval and Next Maintenance Date
+        const intervalInput = document.querySelector('input[name="maintenance_interval"]');
+        const nextMaintenanceInput = document.querySelector('input[name="next_maintenance_date"]');
+        const purchaseDateInput = document.querySelector('input[name="purchase_date"]');
+        const intervalError = document.createElement('span');
+        intervalError.className = 'text-red-500 text-sm mt-1';
+        intervalInput.parentNode.appendChild(intervalError);
+
+        function updateNextMaintenanceDate() {
+            const purchaseDate = new Date(purchaseDateInput.value);
+            const interval = parseInt(intervalInput.value);
+            
+            if (purchaseDate && !isNaN(interval) && interval > 0) {
+                const nextDate = new Date(purchaseDate);
+                nextDate.setDate(nextDate.getDate() + interval);
+                nextMaintenanceInput.value = nextDate.toISOString().split('T')[0];
+            }
+        }
+
+        intervalInput.addEventListener('input', function() {
+            const value = parseInt(this.value);
+            
+            if (!this.value) {
+                intervalError.textContent = 'Maintenance interval is required';
+                this.classList.add('border-red-500');
+                this.classList.remove('border-green-500');
+            } else if (isNaN(value) || value <= 0) {
+                intervalError.textContent = 'Maintenance interval must be greater than 0';
+                this.classList.add('border-red-500');
+                this.classList.remove('border-green-500');
+            } else {
+                intervalError.textContent = '';
+                this.classList.remove('border-red-500');
+                this.classList.add('border-green-500');
+                updateNextMaintenanceDate();
+            }
+        });
+
+        purchaseDateInput.addEventListener('change', updateNextMaintenanceDate);
+
+        // Form Validation
         const form = document.querySelector('form');
         form.addEventListener('submit', function(e) {
-            const nameValid = /^[a-zA-Z][a-zA-Z0-9\s-]*$/.test(nameInput.value);
-            const rateValid = parseFloat(rateInput.value) >= 10 && parseFloat(rateInput.value) <= 10000;
-            const countValue = parseInt(countInput.value);
-            const countValid = countValue >= 1 && countValue <= 100;
+            const inputs = form.querySelectorAll('input[required], select[required], textarea[required]');
+            let isValid = true;
 
-            if (!nameValid || !rateValid || !countValid) {
-                e.preventDefault();
-                if (!nameValid) {
-                    nameInput.focus();
-                } else if (!rateValid) {
-                    rateInput.focus();
-                } else if (!countValid) {
-                    countInput.focus();
+            inputs.forEach(input => {
+                if (!input.value) {
+                    isValid = false;
+                    input.classList.add('border-red-500');
                 }
+            });
+
+            if (!isValid) {
+                e.preventDefault();
+                alert('Please fill in all required fields');
             }
         });
     });
@@ -199,12 +298,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <div class="grid grid-cols-2 gap-6">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                        <select name="category_id" id="category_id" required 
-                                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <select name="category_id" id="category_id" required class="w-full px-3 py-2 border rounded-lg">
                             <option value="">Select Category</option>
                             <?php
-                            $categories = mysqli_query($conn, "SELECT * FROM categories ORDER BY category_name");
-                            while($category = mysqli_fetch_assoc($categories)) {
+                            $category_query = "SELECT * FROM categories ORDER BY category_name";
+                            $category_result = mysqli_query($conn, $category_query);
+                            while($category = mysqli_fetch_assoc($category_result)) {
                                 echo "<option value='" . $category['category_id'] . "'>" . 
                                      htmlspecialchars($category['category_name']) . "</option>";
                             }
@@ -213,8 +312,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Subcategory</label>
-                        <select name="subcategory_id" id="subcategory_id" required 
-                                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <select name="subcategory_id" id="subcategory_id" required class="w-full px-3 py-2 border rounded-lg">
                             <option value="">Select Subcategory</option>
                         </select>
                     </div>
@@ -244,9 +342,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                name="daily_rate" 
                                required 
                                min="10" 
-                               max="1000" 
+                               max="10000" 
                                step="0.01"
-                               title="Daily rate must be between ₹10 and ₹1000"
+                               title="Daily rate must be between ₹10 and ₹10000"
                                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
                     <div>
@@ -263,16 +361,38 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Available Count</label>
-                        <input type="number" 
-                               name="available_count" 
-                               required 
-                               min="1"
-                               max="100"
-                               value="1"
-                               title="Enter number of units (1-100)"
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Manufacturing Year</label>
+                        <input type="number" name="manufacturing_year" required 
+                               min="1900" max="<?php echo date('Y'); ?>"
                                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <small class="text-gray-500">Number of machine units to be added (1-100)</small>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-6 mt-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Purchase Date</label>
+                        <input type="date" name="purchase_date" required 
+                               max="<?php echo date('Y-m-d'); ?>"
+                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Purchase Price (₹)</label>
+                        <input type="number" name="purchase_price" required step="0.01"
+                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-6 mt-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Maintenance Interval (Days)</label>
+                        <input type="number" name="maintenance_interval" required min="1"
+                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Next Maintenance Date</label>
+                        <input type="date" name="next_maintenance_date" required 
+                               min="<?php echo date('Y-m-d'); ?>"
+                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
                 </div>
 
@@ -309,21 +429,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             <th class="pb-4 font-medium">Machine</th>
                             <th class="pb-4 font-medium">Category</th>
                             <th class="pb-4 font-medium">Daily Rate</th>
-                            <th class="pb-4 font-medium">Total Units</th>
-                            <th class="pb-4 font-medium">Available</th>
+                            <th class="pb-4 font-medium">Status</th>
                             <th class="pb-4 font-medium">Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php
-                        $query = "SELECT m.*, c.category_name, s.subcategory_name,
-                                  COUNT(mu.unit_id) as total_units,
-                                  SUM(CASE WHEN mu.status = 'available' THEN 1 ELSE 0 END) as available_units
+                        $query = "SELECT m.*, c.category_name, s.subcategory_name
                                   FROM machines m 
                                   LEFT JOIN categories c ON m.category_id = c.category_id 
                                   LEFT JOIN subcategories s ON m.subcategory_id = s.subcategory_id 
-                                  LEFT JOIN machine_units mu ON m.machine_id = mu.machine_id
-                                  GROUP BY m.machine_id
                                   ORDER BY m.name";
                         $result = mysqli_query($conn, $query);
                         
@@ -333,13 +448,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             echo '<td class="py-4">' . htmlspecialchars($row['category_name']) . 
                                  ' / ' . htmlspecialchars($row['subcategory_name']) . '</td>';
                             echo '<td class="py-4">₹' . htmlspecialchars($row['daily_rate']) . '</td>';
-                            echo '<td class="py-4">' . htmlspecialchars($row['total_units']) . '</td>';
-                            echo '<td class="py-4">' . htmlspecialchars($row['available_units']) . '</td>';
+                            echo '<td class="py-4">' . htmlspecialchars($row['status']) . '</td>';
                             echo '<td class="py-4">';
                             echo '<a href="edit_machine.php?id=' . $row['machine_id'] . '" 
-                                    class="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 mr-2">Edit</a>';
-                            echo '<a href="view_units.php?id=' . $row['machine_id'] . '" 
-                                    class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">View Units</a>';
+                                    class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">Edit</a>';
                             echo '</td>';
                             echo '</tr>';
                         }
@@ -350,17 +462,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         </div>
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-    // Dynamic subcategory loading
-    $('#category_id').change(function() {
-        var category_id = $(this).val();
-        $.ajax({
-            url: 'get_subcategories.php',
-            type: 'POST',
-            data: {category_id: category_id},
-            success: function(response) {
-                $('#subcategory_id').html(response);
+    $(document).ready(function() {
+        $('#category_id').change(function() {
+            var category_id = $(this).val();
+            
+            if(category_id != '') {
+                $.ajax({
+                    url: 'get_subcategories.php',
+                    method: 'POST',
+                    data: {category_id: category_id},
+                    success: function(data) {
+                        $('#subcategory_id').html(data);
+                        console.log('Received data:', data); // Debug log
+                    }
+                });
+            } else {
+                $('#subcategory_id').html('<option value="">Select Subcategory</option>');
             }
         });
     });

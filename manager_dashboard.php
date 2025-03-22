@@ -43,22 +43,19 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'manager') {
                 </a>
                 
                 <a href="managerstore.php" class="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
-                <i class="fas fa-store mr-3"></i>Store
+                    <i class="fas fa-store mr-3"></i>Store
                 </a>
-                <a href="available_machines.php" class="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
+                <a href="store_machines.php" class="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
                     <i class="fas fa-cogs mr-3"></i>Available Machines
-                </a>
-                <a href="add_machine.php" class="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
-                    <i class="fas fa-plus mr-3"></i>Add Machine
                 </a>
                 <a href="manage_rates.php" class="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
                     <i class="fas fa-dollar-sign mr-3"></i>Manage Rates
                 </a>
-                <a href="review_management.php" class="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
+                <a href="manager_reviewed.php" class="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
                     <i class="fas fa-star mr-3"></i>Review Management
                 </a>
-                <a href="approvals.php" class="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
-                    <i class="fas fa-check-circle mr-3"></i>Approvals
+                <a href="manager_approvals.php" class="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
+                    <i class="fas fa-check-circle mr-3"></i>Rental Approvals
                 </a>
                 <a href="profile_settings.php" class="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
                     <i class="fas fa-user-cog mr-3"></i>Profile Settings
@@ -72,9 +69,25 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'manager') {
         <!-- Top Header -->
         <div class="flex justify-between items-center mb-8">
             <h1 class="text-2xl font-bold text-gray-800">Manager Dashboard</h1>
-            <a href="logout.php" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
-                Logout
-            </a>
+            <div class="flex items-center space-x-4">
+                <a href="manager_notifications.php" class="relative">
+                    <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                    <?php
+                    // Get unread notifications count
+                    $unread_query = "SELECT COUNT(*) as count FROM manager_notifications WHERE is_read = FALSE";
+                    $result = mysqli_query($conn, $unread_query);
+                    $unread_count = mysqli_fetch_assoc($result)['count'];
+                    if($unread_count > 0) {
+                        echo "<span class='absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold'>$unread_count</span>";
+                    }
+                    ?>
+                </a>
+                <a href="logout.php" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
+                    Logout
+                </a>
+            </div>
         </div>
 
         
@@ -86,10 +99,10 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'manager') {
                 <h3 class="text-gray-500 text-sm font-medium">Total Machines</h3>
                 <p class="text-3xl font-bold text-gray-800">
                     <?php 
-                    // Sum up all available_count from machines
-                    $machines_count_query = "SELECT SUM(available_count) as total_count 
-                                           FROM machines 
-                                           WHERE status = 'available'";  // Only count available machines
+                    // Count available machines from the machines table
+                    $machines_count_query = "SELECT COUNT(*) as total_count 
+                                            FROM machines 
+                                            WHERE status = 'available'";
                     $result = mysqli_query($conn, $machines_count_query);
                     $row = mysqli_fetch_assoc($result);
                     echo $row['total_count'] ?? 0;  // Show 0 if null
@@ -101,8 +114,8 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'manager') {
                 <h3 class="text-gray-500 text-sm font-medium">Total Inventory</h3>
                 <p class="text-3xl font-bold text-gray-800">
                     <?php 
-                    // Sum up all available_count from machines regardless of status
-                    $total_inventory_query = "SELECT SUM(available_count) as total_inventory 
+                    // Update total inventory query as well
+                    $total_inventory_query = "SELECT COUNT(*) as total_inventory 
                                             FROM machines";
                     $result = mysqli_query($conn, $total_inventory_query);
                     $row = mysqli_fetch_assoc($result);

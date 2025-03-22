@@ -7,6 +7,9 @@ if (session_status() === PHP_SESSION_NONE) {
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
+    <title>Your Page Title</title>
+    <link href="css/styles.css" rel="stylesheet">
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>
         .navbar {
@@ -20,12 +23,12 @@ if (session_status() === PHP_SESSION_NONE) {
             z-index: 1000;
         }
 
-        .nav-content {
+        .nav-container {
             max-width: 1200px;
             margin: 0 auto;
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: center;    
             padding: 0 20px;
         }
 
@@ -146,14 +149,14 @@ if (session_status() === PHP_SESSION_NONE) {
 </head>
 <body>
     <nav class="navbar">
-        <div class="nav-content">
+        <div class="nav-container">
             <a href="index.php" class="logo">
                 <img src="images/logo.png" alt="GEAR EQUIP">
             </a>
             <div class="nav-links">
                 <a href="index.php">Home</a>
                 <a href="index.php#categories">Categories</a>
-                <a href="machines.php">Machines</a>
+                <a href="user_categories.php">Machines</a>
                 <a href="index.php#about">About</a>
                 <a href="index.php#contact">Contact</a>
             </div>
@@ -197,6 +200,26 @@ if (session_status() === PHP_SESSION_NONE) {
                                     }
                                 }
                                 ?>
+                            </a>
+                            <a href="notifications.php" class="relative">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-6 h-6">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                          d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                </svg>
+                                <?php
+                                // Get unread notifications count
+                                $unread_query = "SELECT COUNT(*) as count FROM user_notifications 
+                                                 WHERE user_id = ? AND is_read = FALSE";
+                                $stmt = mysqli_prepare($conn, $unread_query);
+                                mysqli_stmt_bind_param($stmt, "i", $_SESSION['user_id']);
+                                mysqli_stmt_execute($stmt);
+                                $result = mysqli_stmt_get_result($stmt);
+                                $unread_count = mysqli_fetch_assoc($result)['count'];
+                                if($unread_count > 0) {
+                                    echo "<span class='absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs'>$unread_count</span>";
+                                }
+                                ?>
+                                Notifications
                             </a>
                             <a href="profile.php">
                                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -7,8 +7,8 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Fetch cart items and calculate total
-$cart_query = "SELECT c.*, m.name, m.daily_rate, m.image_url 
+// Fetch cart items with machine details
+$cart_query = "SELECT c.*, m.name, m.daily_rate, m.security_deposit, m.image_url 
                FROM cart c 
                JOIN machines m ON c.machine_id = m.machine_id 
                WHERE c.user_id = ?";
@@ -17,22 +17,50 @@ mysqli_stmt_bind_param($stmt, "i", $_SESSION['user_id']);
 mysqli_stmt_execute($stmt);
 $cart_result = mysqli_stmt_get_result($stmt);
 
-// Calculate total
+// Calculate totals
 $subtotal = 0;
 $total_gst = 0;
-$total = 0;
+$total_security_deposit = 0;
+
+// Add this after fetching cart items
+$unavailable_machines = [];
 
 while($item = mysqli_fetch_assoc($cart_result)) {
-    $rental_days = (strtotime($item['end_date']) - strtotime($item['start_date'])) / (60 * 60 * 24);
-    $item_subtotal = $item['daily_rate'] * $rental_days * $item['quantity'];
-    $item_gst = $item_subtotal * 0.18; // 18% GST
+    $rental_days = max(1, (strtotime($item['end_date']) - strtotime($item['start_date'])) / (60 * 60 * 24));
+    $item_subtotal = $item['daily_rate'] * $rental_days;
+    $item_gst = $item_subtotal * 0.18;
+    
     $subtotal += $item_subtotal;
     $total_gst += $item_gst;
-}
-$total = $subtotal + $total_gst;
+    $total_security_deposit += $item['security_deposit'];
 
-// Convert to paise for Razorpay
-$total_in_paise = $total * 100;
+    // Check if machine is already rented
+    $check_query = "SELECT status FROM machines WHERE machine_id = ?";
+    $stmt = mysqli_prepare($conn, $check_query);
+    mysqli_stmt_bind_param($stmt, "i", $item['machine_id']);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    $machine = mysqli_fetch_assoc($result);
+    
+    if ($machine['status'] == 'rented') {
+        $unavailable_machines[] = $item['name'];
+    }
+}
+
+$grand_total = $subtotal + $total_gst + $total_security_deposit;
+$total_in_paise = $grand_total * 100;
+
+// Reset result pointer
+mysqli_data_seek($cart_result, 0);
+
+// Show warning if machines are unavailable
+if (!empty($unavailable_machines)) {
+    echo '<div style="background-color: #fee2e2; color: #b91c1c; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
+        <strong>Warning:</strong> The following machines are no longer available: ' . 
+        implode(', ', $unavailable_machines) . 
+        '. Please remove them from your cart.
+    </div>';
+}
 ?>
 
 <!DOCTYPE html>
@@ -43,58 +71,211 @@ $total_in_paise = $total * 100;
     <title>Checkout - GEAR EQUIP</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <style>
+        .main-container {
+            max-width: 1200px;
+            margin: 120px auto 40px; /* Increased top margin to account for fixed header */
+            padding: 0 20px;
+        }
+        .page-title {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            color: #1f2937;
+        }
+        .checkout-item {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .item-image {
+            max-width: 150px;
+            height: 100px;
+            object-fit: cover;
+            display: block;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+        .item-name {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .rental-details {
+            margin: 15px 0;
+        }
+        .cost-details {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+        .total-row {
+            border-top: 2px solid #eee;
+            margin-top: 10px;
+            padding-top: 10px;
+            font-weight: bold;
+        }
+        .pay-button {
+            background: #2563eb;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            width: 100%;
+            margin-top: 20px;
+        }
+        .pay-button:hover {
+            background: #1d4ed8;
+        }
+        .status-button {
+            background-color: <?php echo $machine_status == 'available' ? '#10b981' : ($machine_status == 'rented' ? '#ef4444' : '#f59e0b'); ?>;
+            color: white;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: default;
+            margin-top: 10px;
+        }
+    </style>
 </head>
-<body class="bg-gray-100">
+<body style="background-color: #f3f4f6;">
     <?php include 'nav.php'; ?>
 
-    <div class="max-w-4xl mx-auto px-4 py-8 mt-20">
-        <h1 class="text-3xl font-bold mb-8">Checkout</h1>
+    <div class="main-container">
+        <h1 class="page-title">Checkout</h1>
 
-        <!-- Order Summary -->
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h2 class="text-xl font-semibold mb-4">Order Summary</h2>
-            <div class="space-y-2">
-                <div class="flex justify-between">
-                    <span>Subtotal:</span>
-                    <span>₹<?php echo number_format($subtotal, 2); ?></span>
-                </div>
-                <div class="flex justify-between">
-                    <span>GST (18%):</span>
-                    <span>₹<?php echo number_format($total_gst, 2); ?></span>
-                </div>
-                <div class="flex justify-between text-lg font-semibold">
-                    <span>Total:</span>
-                    <span>₹<?php echo number_format($total, 2); ?></span>
+        <?php if (!empty($unavailable_machines)): ?>
+            <div class="bg-red-100 text-red-700 p-4 rounded-lg mb-6">
+                <strong>Warning:</strong> The following machines are no longer available: 
+                <?php echo implode(', ', $unavailable_machines); ?>. 
+                Please remove them from your cart.
+            </div>
+        <?php endif; ?>
+
+        <?php while($item = mysqli_fetch_assoc($cart_result)): 
+            $rental_days = max(1, (strtotime($item['end_date']) - strtotime($item['start_date'])) / (60 * 60 * 24));
+            $item_subtotal = $item['daily_rate'] * $rental_days;
+            $item_gst = $item_subtotal * 0.18;
+
+            // Fetch current machine status
+            $status_query = "SELECT status FROM machines WHERE machine_id = ?";
+            $stmt = mysqli_prepare($conn, $status_query);
+            mysqli_stmt_bind_param($stmt, "i", $item['machine_id']);
+            mysqli_stmt_execute($stmt);
+            $status_result = mysqli_stmt_get_result($stmt);
+            $machine_status = mysqli_fetch_assoc($status_result)['status'];
+        ?>
+            <div class="checkout-item">
+                <div class="item-content">
+                    <div class="image-container">
+                        <img src="<?php echo htmlspecialchars($item['image_url']); ?>" 
+                             alt="<?php echo htmlspecialchars($item['name']); ?>"
+                             class="item-image">
+                    </div>
+                    
+                    <div class="item-details">
+                        <h2 class="item-name"><?php echo htmlspecialchars($item['name']); ?></h2>
+                        
+                        <div class="rental-details">
+                            <h3 style="font-weight: bold; margin-bottom: 10px;">Rental Period</h3>
+                            <p>Start: <?php echo date('d M Y', strtotime($item['start_date'])); ?></p>
+                            <p>End: <?php echo date('d M Y', strtotime($item['end_date'])); ?></p>
+                            <p>Duration: <?php echo $rental_days; ?> days</p>
+                        </div>
+
+                        <div class="cost-details">
+                            <div class="summary-row">
+                                <span>Daily Rate:</span>
+                                <span>₹<?php echo number_format($item['daily_rate'], 2); ?></span>
+                            </div>
+                            <div class="summary-row">
+                                <span>Rental Cost (<?php echo $rental_days; ?> days):</span>
+                                <span>₹<?php echo number_format($item_subtotal, 2); ?></span>
+                            </div>
+                            <div class="summary-row">
+                                <span>GST (18%):</span>
+                                <span>₹<?php echo number_format($item_gst, 2); ?></span>
+                            </div>
+                            <div class="summary-row">
+                                <span>Security Deposit:</span>
+                                <span>₹<?php echo number_format($item['security_deposit'], 2); ?></span>
+                            </div>
+                        </div>
+
+                        <!-- Status Button -->
+                        <button class="status-button" style="
+                            background-color: <?php echo $machine_status == 'available' ? '#10b981' : ($machine_status == 'rented' ? '#ef4444' : '#f59e0b'); ?>;
+                            color: white;
+                            padding: 5px 10px;
+                            border: none;
+                            border-radius: 4px;
+                            cursor: default;
+                            margin-top: 10px;
+                        ">
+                            <?php echo ucfirst($machine_status); ?>
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
+        <?php endwhile; ?>
 
-        <!-- Payment Button -->
-        <button onclick="makePayment()" 
-                class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 transition duration-300">
-            Pay Now
-        </button>
+        <!-- Final Summary -->
+        <div class="checkout-item">
+            <h2 style="font-size: 24px; font-weight: bold; margin-bottom: 15px;">Order Summary</h2>
+            <div class="cost-details">
+                <div class="summary-row">
+                    <span>Total Rental Cost:</span>
+                    <span>₹<?php echo number_format($subtotal, 2); ?></span>
+                </div>
+                <div class="summary-row">
+                    <span>Total GST:</span>
+                    <span>₹<?php echo number_format($total_gst, 2); ?></span>
+                </div>
+                <div class="summary-row">
+                    <span>Total Security Deposit:</span>
+                    <span>₹<?php echo number_format($total_security_deposit, 2); ?></span>
+                </div>
+                <div class="summary-row total-row">
+                    <span>Grand Total:</span>
+                    <span>₹<?php echo number_format($grand_total, 2); ?></span>
+                </div>
+            </div>
+
+            <button onclick="makePayment()" class="pay-button" <?php echo !empty($unavailable_machines) ? 'disabled style="background-color: #9ca3af; cursor: not-allowed;"' : ''; ?>>
+                Pay Now - ₹<?php echo number_format($grand_total, 2); ?>
+            </button>
+        </div>
     </div>
 
     <script>
     function makePayment() {
         var options = {
-            "key": "rzp_test_e233tPrR8WUuea", // Replace with your Razorpay Key ID
+            "key": "rzp_test_e233tPrR8WUuea",
             "amount": "<?php echo $total_in_paise; ?>",
             "currency": "INR",
             "name": "GEAR EQUIP",
             "description": "Equipment Rental Payment",
             "image": "images/logo.png",
             "handler": function (response){
-                // Send payment details to server for verification
                 verifyPayment(response);
             },
             "prefill": {
-                "name": "<?php echo $_SESSION['full_name']; ?>",
-                "email": "<?php echo $_SESSION['email'] ?? ''; ?>",
+                "name": "<?php echo htmlspecialchars($_SESSION['full_name'] ?? ''); ?>",
+                "email": "<?php echo htmlspecialchars($_SESSION['email'] ?? ''); ?>"
             },
             "theme": {
-                "color": "#3B82F6"
+                "color": "#2563eb"
             }
         };
         var rzp1 = new Razorpay(options);
@@ -102,21 +283,14 @@ $total_in_paise = $total * 100;
     }
 
     function verifyPayment(response) {
-        console.log('Payment response:', response);
-        
-        // Check if we have a payment ID
-        if (!response.razorpay_payment_id) {
-            alert('Payment failed: No payment ID received');
-            return;
-        }
-        
         fetch('verify_payment.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                razorpay_payment_id: response.razorpay_payment_id
+                razorpay_payment_id: response.razorpay_payment_id,
+                amount: <?php echo $total_in_paise; ?>
             })
         })
         .then(response => response.json())
@@ -124,12 +298,12 @@ $total_in_paise = $total * 100;
             if (data.success) {
                 window.location.href = 'payment_success.php';
             } else {
-                alert('Payment verification failed: ' + (data.message || 'Please contact support.'));
+                alert('Payment verification failed: ' + data.message);
             }
         })
         .catch(error => {
             console.error('Verification error:', error);
-            alert('An error occurred during payment verification: ' + error.message);
+            alert('Payment verification failed. Please try again.');
         });
     }
     </script>

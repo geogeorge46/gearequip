@@ -145,6 +145,18 @@ include 'nav.php';
 
             if (mysqli_num_rows($result) > 0) {
                 while($row = mysqli_fetch_assoc($result)) {
+                    // First, get the average rating for each machine
+                    $rating_query = "SELECT machine_id, AVG(COALESCE(rating, 0)) as avg_rating, COUNT(rating) as rating_count 
+                                     FROM reviews 
+                                     GROUP BY machine_id";
+                    $rating_result = mysqli_query($conn, $rating_query);
+                    $ratings = [];
+                    while($rating_row = mysqli_fetch_assoc($rating_result)) {
+                        $ratings[$rating_row['machine_id']] = [
+                            'avg_rating' => round($rating_row['avg_rating'], 1),
+                            'count' => $rating_row['rating_count']
+                        ];
+                    }
                     ?>
                     <div class="machine-card bg-white rounded-lg overflow-hidden shadow-lg transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
                         <span class="badge absolute top-4 right-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-semibold">Popular</span>
@@ -161,9 +173,31 @@ include 'nav.php';
                         >
                         <div class="p-6">
                             <h3 class="text-2xl font-bold text-[#2c3e50] mb-3"><?php echo htmlspecialchars($row['name']); ?></h3>
-                            <div class="text-yellow-500 text-lg mb-2">
-                                <?php echo str_repeat('★', floor($row['rating'])); ?>
-                                <span class="text-gray-600 text-sm">(<?php echo number_format($row['rating'], 1); ?>)</span>
+                            <div class="flex items-center mb-2">
+                                <div class="flex text-yellow-400">
+                                    <?php
+                                    $machine_id = $row['machine_id'];
+                                    $rating = isset($ratings[$machine_id]) ? $ratings[$machine_id]['avg_rating'] : 0;
+                                    $rating_count = isset($ratings[$machine_id]) ? $ratings[$machine_id]['count'] : 0;
+                                    
+                                    // Display stars
+                                    for($i = 1; $i <= 5; $i++) {
+                                        if($i <= $rating) {
+                                            echo '<i class="fas fa-star"></i>';
+                                        } elseif($i - 0.5 <= $rating) {
+                                            echo '<i class="fas fa-star-half-alt"></i>';
+                                        } else {
+                                            echo '<i class="far fa-star"></i>';
+                                        }
+                                    }
+                                    ?>
+                                </div>
+                                <span class="text-gray-600 ml-2">
+                                    (<?php echo number_format($rating, 1); ?>) 
+                                    <span class="text-sm">
+                                        <?php echo $rating_count; ?> reviews
+                                    </span>
+                                </span>
                             </div>
                             <p class="text-xl font-bold text-green-600 mb-4">₹<?php echo number_format($row['price']); ?>/day</p>
                             <?php if(isset($_SESSION['user_id'])): ?>
@@ -313,12 +347,51 @@ include 'nav.php';
                 $query = "SELECT * FROM machines WHERE status = 'available'";
                 $result = mysqli_query($conn, $query);
 
-                while($machine = mysqli_fetch_assoc($result)) { ?>
+                while($machine = mysqli_fetch_assoc($result)) {
+                    // First, get the average rating for each machine
+                    $rating_query = "SELECT machine_id, AVG(COALESCE(rating, 0)) as avg_rating, COUNT(rating) as rating_count 
+                                     FROM reviews 
+                                     GROUP BY machine_id";
+                    $rating_result = mysqli_query($conn, $rating_query);
+                    $ratings = [];
+                    while($rating_row = mysqli_fetch_assoc($rating_result)) {
+                        $ratings[$rating_row['machine_id']] = [
+                            'avg_rating' => round($rating_row['avg_rating'], 1),
+                            'count' => $rating_row['rating_count']
+                        ];
+                    }
+                    ?>
                     <div class="machine-card">
                         <?php if($machine['image_url']): ?>
                             <img src="<?php echo htmlspecialchars($machine['image_url']); ?>" alt="<?php echo htmlspecialchars($machine['name']); ?>">
                         <?php endif; ?>
                         <h3><?php echo htmlspecialchars($machine['name']); ?></h3>
+                        <div class="flex items-center mb-2">
+                            <div class="flex text-yellow-400">
+                                <?php
+                                $machine_id = $machine['machine_id'];
+                                $rating = isset($ratings[$machine_id]) ? $ratings[$machine_id]['avg_rating'] : 0;
+                                $rating_count = isset($ratings[$machine_id]) ? $ratings[$machine_id]['count'] : 0;
+                                
+                                // Display stars
+                                for($i = 1; $i <= 5; $i++) {
+                                    if($i <= $rating) {
+                                        echo '<i class="fas fa-star"></i>';
+                                    } elseif($i - 0.5 <= $rating) {
+                                        echo '<i class="fas fa-star-half-alt"></i>';
+                                    } else {
+                                        echo '<i class="far fa-star"></i>';
+                                    }
+                                }
+                                ?>
+                            </div>
+                            <span class="text-gray-600 ml-2">
+                                (<?php echo number_format($rating, 1); ?>) 
+                                <span class="text-sm">
+                                    <?php echo $rating_count; ?> reviews
+                                </span>
+                            </span>
+                        </div>
                         <p class="price">₹<?php echo number_format($machine['daily_rate'], 2); ?> / day</p>
                         <p class="status">Status: <?php echo htmlspecialchars($machine['status']); ?></p>
                         <button onclick="viewMachineDetails(<?php echo $machine['machine_id']; ?>)">View Details</button>

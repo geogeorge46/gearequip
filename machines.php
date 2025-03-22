@@ -2,35 +2,39 @@
 include 'config.php';
 session_start();
 
-// Fetch all categories
-$categories_query = "SELECT * FROM categories";
-$categories_result = mysqli_query($conn, $categories_query);
+// Get subcategory ID from URL
+$subcategory_id = isset($_GET['subcategory']) ? (int)$_GET['subcategory'] : 0;
 
-// If a category is selected, fetch its machines
-$selected_category = isset($_GET['category']) ? (int)$_GET['category'] : null;
-if ($selected_category) {
-    $machines_query = "SELECT m.* FROM machines m 
-                      JOIN machine_categories mc ON m.machine_id = mc.machine_id 
-                      WHERE mc.category_id = ?";
-    $stmt = mysqli_prepare($conn, $machines_query);
-    mysqli_stmt_bind_param($stmt, "i", $selected_category);
-    mysqli_stmt_execute($stmt);
-    $machines_result = mysqli_stmt_get_result($stmt);
+// Fetch subcategory and category details
+$category_query = "SELECT s.subcategory_name, s.description as sub_desc, 
+                         c.category_name, c.category_id
+                  FROM subcategories s
+                  JOIN categories c ON s.category_id = c.category_id
+                  WHERE s.subcategory_id = ?";
+$stmt = mysqli_prepare($conn, $category_query);
+mysqli_stmt_bind_param($stmt, "i", $subcategory_id);
+mysqli_stmt_execute($stmt);
+$nav_result = mysqli_stmt_get_result($stmt);
+$nav_info = mysqli_fetch_assoc($nav_result);
+
+// Check if subcategory exists
+if (!$nav_info) {
+    // Redirect to categories page if subcategory not found
+    $_SESSION['error'] = "Subcategory not found.";
+    header('Location: user_categories.php');
+    exit();
 }
 
-// Query to fetch machines with their categories
-$query = "SELECT m.*, c.category_name 
-          FROM machines m 
-          LEFT JOIN machine_categories mc ON m.machine_id = mc.machine_id 
-          LEFT JOIN categories c ON mc.category_id = c.category_id 
-          ORDER BY m.created_at DESC";
+// Fetch machines
+$query = "SELECT * FROM machines WHERE subcategory_id = ?";
+$stmt = mysqli_prepare($conn, $query);
+mysqli_stmt_bind_param($stmt, "i", $subcategory_id);
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
 
-$result = $conn->query($query);
 $machines = [];
-if ($result) {
-    while ($row = $result->fetch_assoc()) {
-        $machines[] = $row;
-    }
+while ($row = mysqli_fetch_assoc($result)) {
+    $machines[] = $row;
 }
 ?>
 
@@ -39,423 +43,227 @@ if ($result) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Machine Categories</title>
+    <title>Available Machines - GEAR EQUIP</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        /* Navigation Styles */
-        .navbar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            background: white;
-            padding: 1rem;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            z-index: 1000;
-        }
-
-        .nav-content {
+        .machines-container {
             max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            margin: 100px auto 40px;
             padding: 0 20px;
         }
 
-        .logo {
-            display: flex;
-            align-items: center;
-        }
-
-        .logo img {
-            height: 40px;
-            width: auto;
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 2rem;
-            align-items: center;
-        }
-
-        .nav-links a {
-            text-decoration: none;
-            color: #2c3e50;
-            font-weight: 500;
-            font-size: 16px;
-            transition: color 0.3s ease;
-        }
-
-        .nav-links a:hover {
-            color: #27ae60;
-        }
-
-        .auth-buttons {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-        }
-
-        .login-btn, .register-btn {
-            padding: 10px 24px;
-            border-radius: 25px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .login-btn {
-            background: linear-gradient(145deg, #27ae60, #219a52);
-            color: white;
-            box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
-        }
-
-        .register-btn {
-            background: linear-gradient(145deg, #2196f3, #1e88e5);
-            color: white;
-            box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
-        }
-
-        .login-btn:hover, .register-btn:hover {
-            transform: translateY(-2px);
-        }
-
-        /* Dropdown styles */
-        .dropdown-menu {
-            position: absolute;
-            right: 0;
-            top: 100%;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            min-width: 200px;
-            z-index: 1000;
-        }
-
-        .dropdown-menu a {
-            display: flex;
-            align-items: center;
-            padding: 12px 16px;
-            color: #2c3e50;
-            text-decoration: none;
-            transition: background-color 0.3s ease;
-        }
-
-        .dropdown-menu a:hover {
-            background-color: #f8f9fa;
-        }
-
-        .dropdown-menu svg {
-            width: 16px;
-            height: 16px;
-            margin-right: 8px;
-        }
-
-        .dropdown-menu hr {
-            margin: 8px 0;
-            border: none;
-            border-top: 1px solid #eee;
-        }
-
-        /* Your existing machines.php styles */
-        body {
-            font-family: 'Poppins', sans-serif;
-            background-color: #f8f9fa;
-        }
-
-        .categories-container {
-            max-width: 1200px;
-            margin: 120px auto 40px;
-            padding: 0 20px;
-        }
-
-        .categories-grid {
+        .machines-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 30px;
             margin-top: 40px;
         }
 
-        .category-card {
-            position: relative;
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            transition: transform 0.3s ease;
-            cursor: pointer;
-            text-decoration: none;
-        }
-
-        .category-card:hover {
-            transform: translateY(-10px);
-        }
-
-        .category-image {
-            width: 100%;
-            height: 300px;
-            object-fit: cover;
-        }
-
-        .category-overlay {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
-            padding: 20px;
-            color: white;
-        }
-
-        .category-title {
-            font-size: 24px;
-            font-weight: 600;
-            margin-bottom: 10px;
-            color: white;
-        }
-
-        .category-description {
-            font-size: 14px;
-            opacity: 0.9;
-            color: white;
-        }
-
-        /* Machines Grid Styling */
-        .machines-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 25px;
-            margin-top: 30px;
-        }
-
         .machine-card {
             background: white;
-            border-radius: 12px;
+            border-radius: 20px;
             overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
             transition: transform 0.3s ease;
         }
 
         .machine-card:hover {
-            transform: translateY(-5px);
+            transform: translateY(-10px);
         }
 
         .machine-image {
             width: 100%;
-            height: 200px;
+            height: 250px;
             object-fit: cover;
         }
 
-        .machine-info {
+        .machine-details {
             padding: 20px;
         }
 
-        .machine-title {
-            font-size: 18px;
+        .machine-name {
+            font-size: 1.5rem;
             font-weight: 600;
+            color: #2d3748;
             margin-bottom: 10px;
-            color: #2c3e50;
         }
 
-        .machine-price {
-            color: #27ae60;
-            font-weight: 600;
-            font-size: 16px;
+        .machine-description {
+            color: #4a5568;
             margin-bottom: 15px;
+            line-height: 1.6;
         }
 
-        .machine-status {
-            display: inline-block;
-            padding: 5px 12px;
-            border-radius: 15px;
-            font-size: 14px;
-            font-weight: 500;
+        .machine-specs {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
         }
 
-        .status-available {
-            background: #e7f7ed;
-            color: #27ae60;
+        .spec-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #718096;
+            font-size: 0.9rem;
         }
 
-        .back-button {
-            display: inline-block;
-            padding: 10px 20px;
-            background: #2c3e50;
+        .price-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: #f7fafc;
+            border-top: 1px solid #edf2f7;
+        }
+
+        .price {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .rent-button {
+            padding: 8px 20px;
+            background: #4CAF50;
             color: white;
             border-radius: 8px;
-            text-decoration: none;
-            margin-bottom: 20px;
-            transition: background-color 0.3s ease;
+            font-weight: 500;
+            transition: background 0.3s ease;
         }
 
-        .back-button:hover {
-            background: #34495e;
+        .rent-button:hover {
+            background: #43A047;
         }
 
-        /* Add responsive design */
-        @media (max-width: 768px) {
-            .categories-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .categories-container {
-                margin-top: 100px;
-            }
-
-            .category-image {
-                height: 250px;
-            }
-        }
-
-        /* Rent Now button styling */
-        .cart-button {
-            display: block;
-            width: 100%;
-            padding: 10px;
+        .login-button {
+            padding: 8px 20px;
             background: #3498db;
             color: white;
-            text-align: center;
             border-radius: 8px;
-            margin-top: 15px;
-            text-decoration: none;
-            transition: background-color 0.3s ease;
+            font-weight: 500;
+            transition: background 0.3s ease;
         }
 
-        .cart-button:hover {
+        .login-button:hover {
             background: #2980b9;
         }
 
-        /* Responsive design */
-        @media (max-width: 768px) {
-            .nav-links {
-                display: none;
-            }
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 30px;
+            padding: 15px 25px;
+            background: white;
+            border-radius: 50px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
 
-            .auth-buttons {
-                gap: 8px;
-            }
+        .breadcrumb a {
+            color: #3498db;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
 
-            .login-btn, .register-btn {
-                padding: 8px 16px;
-                font-size: 13px;
-            }
+        .breadcrumb a:hover {
+            color: #2980b9;
         }
     </style>
 </head>
-<body>
+<body class="bg-gray-50">
     <?php include 'nav.php'; ?>
     
-    <div class="categories-container">
-        <?php if (!$selected_category): ?>
-            <h1 class="text-4xl font-bold text-center mb-8">Machine Categories</h1>
-            <div class="categories-grid">
-                <?php while($category = mysqli_fetch_assoc($categories_result)): ?>
-                    <a href="display_machines.php?category=<?php echo $category['category_id']; ?>" class="category-card">
-                        <img src="images/categories/<?php echo strtolower(str_replace(' ', '-', $category['category_name'])); ?>.jpg" 
-                             alt="<?php echo htmlspecialchars($category['category_name']); ?>"
-                             class="category-image">
-                        <div class="category-overlay">
-                            <h2 class="category-title"><?php echo htmlspecialchars($category['category_name']); ?></h2>
-                            <p class="category-description"><?php echo htmlspecialchars($category['description']); ?></p>
-                        </div>
-                    </a>
-                <?php endwhile; ?>
-            </div>
-        <?php else: ?>
-            <?php 
-            $category_query = "SELECT category_name FROM categories WHERE category_id = ?";
-            $stmt = mysqli_prepare($conn, $category_query);
-            mysqli_stmt_bind_param($stmt, "i", $selected_category);
-            mysqli_stmt_execute($stmt);
-            $category_result = mysqli_stmt_get_result($stmt);
-            $category = mysqli_fetch_assoc($category_result);
-            ?>
-            <a href="machines.php" class="back-button">← Back to Categories</a>
-            <h1 class="text-4xl font-bold mb-8"><?php echo htmlspecialchars($category['category_name']); ?> Machines</h1>
-            
-            <div class="machines-grid">
-                <?php while($machine = mysqli_fetch_assoc($machines_result)): ?>
-                    <div class="machine-card">
-                        <img src="<?php echo htmlspecialchars($machine['image_url']); ?>" 
-                             alt="<?php echo htmlspecialchars($machine['name']); ?>"
-                             class="machine-image"
-                             onerror="this.src='images/default-machine.jpg'">
-                        <div class="machine-info">
-                            <h3 class="machine-title"><?php echo htmlspecialchars($machine['name']); ?></h3>
-                            <p class="machine-price">₹<?php echo number_format($machine['daily_rate'], 2); ?> / day</p>
-                            <span class="machine-status <?php echo $machine['status'] == 'available' ? 'status-available' : ''; ?>">
-                                <?php echo ucfirst(htmlspecialchars($machine['status'])); ?>
-                            </span>
-                            
-                            <p class="text-sm text-gray-600 mt-2">
-                                Available Units: <?php echo htmlspecialchars($machine['available_count']); ?>
-                            </p>
+    <div class="machines-container">
+        <div class="breadcrumb">
+            <a href="user_categories.php"><i class="fas fa-home"></i> Categories</a>
+            <?php if ($nav_info): ?>
+                <i class="fas fa-chevron-right text-gray-400"></i>
+                <a href="user_subcategories.php?category=<?php echo htmlspecialchars($nav_info['category_id']); ?>">
+                    <?php echo htmlspecialchars($nav_info['category_name']); ?>
+                </a>
+                <i class="fas fa-chevron-right text-gray-400"></i>
+                <span class="text-gray-600"><?php echo htmlspecialchars($nav_info['subcategory_name']); ?></span>
+            <?php endif; ?>
+        </div>
 
-                            <?php if(isset($_SESSION['user_id']) && $machine['status'] == 'available' && $machine['available_count'] > 0): ?>
-                                <div class="mt-3">
-                                    <label for="quantity_<?php echo $machine['machine_id']; ?>" class="text-sm text-gray-600">
-                                        Quantity:
-                                    </label>
-                                    <select id="quantity_<?php echo $machine['machine_id']; ?>" 
-                                            class="ml-2 border rounded px-2 py-1">
-                                        <?php for($i = 1; $i <= $machine['available_count']; $i++): ?>
-                                            <option value="<?php echo $i; ?>"><?php echo $i; ?></option>
-                                        <?php endfor; ?>
-                                    </select>
-                                </div>
-                                <a href="#" 
-                                   onclick="addToCart(<?php echo $machine['machine_id']; ?>)"
-                                   class="cart-button">
-                                    Add To Cart
-                                </a>
-                            <?php elseif(!isset($_SESSION['user_id'])): ?>
-                                <a href="login.php" class="cart-button">
-                                    Login to Rent
-                                </a>
-                            <?php else: ?>
-                                <button disabled class="cart-button bg-gray-400 cursor-not-allowed">
-                                    Not Available
-                                </button>
-                            <?php endif; ?>
+        <h1 class="text-4xl font-bold text-center mb-4">
+            <?php echo $nav_info ? htmlspecialchars($nav_info['subcategory_name']) : 'Machines'; ?>
+        </h1>
+        <p class="text-center text-gray-600 mb-8">
+            <?php echo $nav_info ? htmlspecialchars($nav_info['sub_desc']) : ''; ?>
+        </p>
+
+        <div class="machines-grid">
+            <?php foreach($machines as $machine): ?>
+                <div class="machine-card">
+                    <img src="<?php echo htmlspecialchars($machine['image_url']); ?>" 
+                         alt="<?php echo htmlspecialchars($machine['name']); ?>"
+                         class="machine-image">
+                    
+                    <div class="machine-details">
+                        <h2 class="machine-name"><?php echo htmlspecialchars($machine['name']); ?></h2>
+                        <p class="machine-description"><?php echo htmlspecialchars($machine['description']); ?></p>
+                        
+                        <div class="machine-specs">
+                            <div class="spec-item">
+                                <i class="fas fa-industry"></i>
+                                <span><?php echo htmlspecialchars($machine['manufacturer']); ?></span>
+                            </div>
+                            <div class="spec-item">
+                                <i class="fas fa-calendar"></i>
+                                <span><?php echo htmlspecialchars($machine['manufacturing_year']); ?></span>
+                            </div>
+                            <div class="spec-item">
+                                <i class="fas fa-barcode"></i>
+                                <span><?php echo htmlspecialchars($machine['model_number']); ?></span>
+                            </div>
+                            <div class="spec-item">
+                                <i class="fas fa-circle <?php echo $machine['status'] === 'available' ? 'text-green-500' : 'text-red-500'; ?>"></i>
+                                <span class="<?php echo $machine['status'] === 'available' ? 'text-green-600' : 'text-red-600'; ?>">
+                                    <?php echo ucfirst(htmlspecialchars($machine['status'])); ?>
+                                </span>
+                            </div>
                         </div>
                     </div>
-                <?php endwhile; ?>
-            </div>
-        <?php endif; ?>
+
+                    <div class="price-section">
+                        <div class="price">
+                            ₹<?php echo number_format($machine['daily_rate'], 2); ?>/day
+                        </div>
+                        <?php if(isset($_SESSION['user_id'])): ?>
+                            <?php if($machine['status'] === 'available'): ?>
+                                <a href="cart.php?action=add&machine=<?php echo $machine['machine_id']; ?>" 
+                                   class="rent-button">
+                                    Add to Cart
+                                </a>
+                            <?php else: ?>
+                                <button class="bg-gray-400 text-white px-4 py-2 rounded cursor-not-allowed" disabled>
+                                    Currently Rented
+                                </button>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            <a href="login.php" class="login-button">
+                                Login to Rent
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+
+            <?php if (empty($machines)): ?>
+                <div class="col-span-full text-center py-10">
+                    <i class="fas fa-tools text-5xl text-gray-400 mb-4"></i>
+                    <p class="text-xl text-gray-600">No machines found in this subcategory.</p>
+                </div>
+            <?php endif; ?>
+        </div>
     </div>
 
     <?php include 'footer.php'; ?>
-
-    <script>
-    function addToCart(machineId) {
-        const quantity = document.getElementById('quantity_' + machineId).value;
-        
-        fetch('add_to_cart.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: `machine_id=${machineId}&quantity=${quantity}`
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('Added to cart successfully!');
-                window.location.href = 'cart.php';
-            } else {
-                alert(data.message || 'Error adding to cart');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error adding to cart');
-        });
-    }
-    </script>
 </body>
-</html>
+</html> 
