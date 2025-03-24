@@ -56,9 +56,13 @@ if (!isset($_SESSION['user_id'])) {
 // Updated query to include start_date and end_date
 $cart_query = "SELECT c.cart_id, c.user_id, c.machine_id, 
                m.name, m.daily_rate, m.image_url, m.status,
-               m.security_deposit, c.start_date, c.end_date
+               m.security_deposit, c.start_date, c.end_date,
+               cat.category_name, 
+               COALESCE(sub.subcategory_name, 'N/A') as subcategory_name
                FROM cart c 
                JOIN machines m ON c.machine_id = m.machine_id 
+               LEFT JOIN categories cat ON m.category_id = cat.category_id
+               LEFT JOIN subcategories sub ON m.subcategory_id = sub.subcategory_id
                WHERE c.user_id = ?";
 
 $stmt = mysqli_prepare($conn, $cart_query);
@@ -254,6 +258,10 @@ mysqli_data_seek($cart_result, 0);
                              class="cart-image">
                         <div class="cart-info">
                             <h3 class="text-xl font-semibold"><?php echo htmlspecialchars($item['name']); ?></h3>
+                            <p class="text-gray-500">
+                                <?php echo htmlspecialchars($item['category_name']); ?> / 
+                                <?php echo htmlspecialchars($item['subcategory_name']); ?>
+                            </p>
                             <p class="text-gray-600">₹<?php echo number_format($item['daily_rate'], 2); ?> / day</p>
                             <div class="date-inputs">
                                 <div>
@@ -294,7 +302,7 @@ mysqli_data_seek($cart_result, 0);
                             </button>
                         </div>
                         <a href="remove_from_cart.php?cart_id=<?php echo $item['cart_id']; ?>" 
-                           class="remove-btn"
+                           class="remove-btn bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded"
                            onclick="return confirm('Are you sure you want to remove this item?')">
                             Remove
                         </a>

@@ -139,6 +139,10 @@ if (isset($_POST['action']) && isset($_POST['rental_id'])) {
                 <a href="manager_approvals.php" class="block px-4 py-2 rounded-lg bg-blue-50 text-blue-700 font-medium">
                     <i class="fas fa-check-circle mr-3"></i>Rental Approvals
                 </a>
+
+                <a href="manage_refunds.php" class="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
+                    <i class="fas fa-money-bill-wave mr-3"></i>Manage Refunds
+                </a>
             </div>
         </nav>
     </div>
@@ -190,19 +194,31 @@ if (isset($_POST['action']) && isset($_POST['rental_id'])) {
         <!-- Approval Cards Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <?php
-            // Fetch pending rentals that are paid
+            // Modify the rental query to use the correct columns
             $query = "SELECT r.*, 
-                             u.full_name, u.email,
-                             m.name as machine_name, m.daily_rate,
-                             m.image_url
-                      FROM rentals r 
-                      JOIN users u ON r.user_id = u.user_id 
-                      JOIN machines m ON r.machine_id = m.machine_id 
-                      WHERE r.status = 'pending' 
-                      AND r.payment_status = 'paid' 
-                      ORDER BY r.created_at DESC";
+                     u.full_name, u.email,
+                     m.name as machine_name, m.daily_rate,
+                     m.image_url,
+                     COALESCE(ru.new_start_date, r.start_date) as current_start_date,
+                     COALESCE(ru.new_end_date, r.end_date) as current_end_date,
+                     COALESCE(r.total_amount - IFNULL(rf.amount, 0), r.total_amount) as current_total_amount
+              FROM rentals r 
+              JOIN users u ON r.user_id = u.user_id 
+              JOIN machines m ON r.machine_id = m.machine_id 
+              LEFT JOIN rental_updates ru ON r.rental_id = ru.rental_id 
+              LEFT JOIN refunds rf ON ru.update_id = rf.update_id 
+                AND rf.status = 'processed'
+              WHERE r.status = 'pending' 
+              AND r.payment_status = 'paid' 
+              ORDER BY r.created_at DESC";
             
             $result = mysqli_query($conn, $query);
+            
+            if (!$result) {
+                // Add error logging
+                error_log("Query failed: " . mysqli_error($conn));
+                $_SESSION['error'] = "Failed to fetch rentals: " . mysqli_error($conn);
+            }
             
             if (mysqli_num_rows($result) > 0):
                 while ($rental = mysqli_fetch_assoc($result)):
@@ -224,54 +240,167 @@ if (isset($_POST['action']) && isset($_POST['rental_id'])) {
                                 </p>
                             </div>
                             <span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm">
-                                Pending
+                                Pending Approval
                             </span>
                         </div>
 
-                        <div class="space-y-3 mb-6">
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">Customer:</span>
-                                <span class="text-gray-800 font-medium">
-                                    <?php echo htmlspecialchars($rental['full_name']); ?>
-                                </span>
+                        <!-- Customer Information -->
+                        <div class="mb-4">
+                            <h4 class="font-semibold text-gray-700 mb-2">Customer Details</h4>
+                            <p class="text-gray-800"><?php echo htmlspecialchars($rental['full_name']); ?></p>
+                            <p class="text-gray-600 text-sm"><?php echo htmlspecialchars($rental['email']); ?></p>
+                        </div>
+
+                        <!-- Original Booking Details -->
+                        <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                            <h4 class="font-semibold text-gray-700 mb-2">Original Booking</h4>
+                            <div class="space-y-2">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Duration:</span>
+                                    <span class="text-gray-800">
+                                        <?php 
+                                        $original_days = (strtotime($rental['start_date']) - strtotime($rental['end_date'])) / (60 * 60 * 24);
+                                        echo abs($original_days); ?> days
+                                    </span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Start Date:</span>
+                                    <span class="text-gray-800">
+                                        <?php echo date('M d, Y', strtotime($rental['start_date'])); ?>
+                                    </span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">End Date:</span>
+                                    <span class="text-gray-800">
+                                        <?php echo date('M d, Y', strtotime($rental['end_date'])); ?>
+                                    </span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Original Amount:</span>
+                                    <span class="text-gray-800">
+                                        ₹<?php echo number_format($rental['total_amount'], 2); ?>
+                                    </span>
+                                </div>
                             </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">Duration:</span>
-                                <span class="text-gray-800">
-                                    <?php echo $rental_days; ?> days
-                                </span>
+                        </div>
+
+                        <!-- Updated Details (if any) -->
+                        <?php if ($rental['current_start_date'] != $rental['start_date'] || 
+                                  $rental['current_end_date'] != $rental['end_date'] || 
+                                  $rental['current_total_amount'] != $rental['total_amount']): ?>
+                        <div class="mb-6 p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
+                            <h4 class="font-semibold text-blue-800 mb-2">Updated Details</h4>
+                            <div class="space-y-2">
+                                <div class="flex justify-between">
+                                    <span class="text-blue-700">New Duration:</span>
+                                    <span class="text-blue-800 font-medium">
+                                        <?php 
+                                        $new_days = (strtotime($rental['current_end_date']) - strtotime($rental['current_start_date'])) / (60 * 60 * 24);
+                                        echo abs($new_days); ?> days
+                                    </span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-blue-700">New Start Date:</span>
+                                    <span class="text-blue-800 font-medium">
+                                        <?php echo date('M d, Y', strtotime($rental['current_start_date'])); ?>
+                                    </span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-blue-700">New End Date:</span>
+                                    <span class="text-blue-800 font-medium">
+                                        <?php echo date('M d, Y', strtotime($rental['current_end_date'])); ?>
+                                    </span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-blue-700">Updated Amount:</span>
+                                    <span class="text-blue-800 font-medium">
+                                        ₹<?php echo number_format($rental['current_total_amount'], 2); ?>
+                                    </span>
+                                </div>
+                                <?php if ($rental['current_total_amount'] < $rental['total_amount']): ?>
+                                    <?php
+                                    // Check refund status
+                                    $refund_query = "SELECT status FROM refunds 
+                                                     WHERE rental_id = ? 
+                                                     ORDER BY created_at DESC LIMIT 1";
+                                    $stmt = mysqli_prepare($conn, $refund_query);
+                                    mysqli_stmt_bind_param($stmt, "i", $rental['rental_id']);
+                                    mysqli_stmt_execute($stmt);
+                                    $refund_result = mysqli_stmt_get_result($stmt);
+                                    $refund_status = mysqli_fetch_assoc($refund_result)['status'];
+                                    ?>
+                                    <div class="mt-2 flex items-center">
+                                        <i class="fas fa-info-circle mr-2"></i>
+                                        <div>
+                                            <span class="text-sm">
+                                                Refund Amount: ₹<?php echo number_format($rental['total_amount'] - $rental['current_total_amount'], 2); ?>
+                                            </span>
+                                            <span class="ml-2 px-2 py-1 text-xs rounded-full <?php 
+                                                switch($refund_status) {
+                                                    case 'processed':
+                                                        echo 'bg-green-100 text-green-800';
+                                                        break;
+                                                    case 'pending':
+                                                        echo 'bg-yellow-100 text-yellow-800';
+                                                        break;
+                                                    case 'failed':
+                                                        echo 'bg-red-100 text-red-800';
+                                                        break;
+                                                }
+                                            ?>">
+                                                <?php 
+                                                switch($refund_status) {
+                                                    case 'processed':
+                                                        echo '✓ Refund Paid';
+                                                        break;
+                                                    case 'pending':
+                                                        echo '⏳ Refund Pending';
+                                                        break;
+                                                    case 'failed':
+                                                        echo '✕ Refund Failed';
+                                                        break;
+                                                    default:
+                                                        echo '⏳ Refund Not Initiated';
+                                                }
+                                                ?>
+                                            </span>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
                             </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">Start Date:</span>
-                                <span class="text-gray-800">
-                                    <?php echo date('M d, Y', strtotime($rental['start_date'])); ?>
-                                </span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">End Date:</span>
-                                <span class="text-gray-800">
-                                    <?php echo date('M d, Y', strtotime($rental['end_date'])); ?>
-                                </span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">Total Amount:</span>
-                                <span class="text-gray-800 font-semibold">
-                                    ₹<?php echo number_format($rental['total_amount'], 2); ?>
-                                </span>
-                            </div>
+                        </div>
+                        <?php endif; ?>
+
+                        <!-- Security Deposit -->
+                        <div class="mb-6 p-4 bg-gray-50 rounded-lg">
                             <div class="flex justify-between">
                                 <span class="text-gray-600">Security Deposit:</span>
-                                <span class="text-gray-800">
+                                <span class="text-gray-800 font-semibold">
                                     ₹<?php echo number_format($rental['security_deposit'], 2); ?>
                                 </span>
                             </div>
                         </div>
 
+                        <!-- Action Buttons -->
                         <div class="flex space-x-3">
+                            <button type="button" 
+                                    onclick="openEditModal(<?php echo htmlspecialchars(json_encode([
+                                        'rental_id' => $rental['rental_id'],
+                                        'machine_name' => $rental['machine_name'],
+                                        'start_date' => $rental['current_start_date'],
+                                        'end_date' => $rental['current_end_date'],
+                                        'daily_rate' => $rental['daily_rate'],
+                                        'total_amount' => $rental['current_total_amount'],
+                                        'customer_name' => $rental['full_name']
+                                    ])); ?>)"
+                                    class="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg transition duration-200">
+                                <i class="fas fa-edit mr-2"></i>Edit Dates
+                            </button>
                             <form method="POST" class="flex-1">
                                 <input type="hidden" name="rental_id" value="<?php echo $rental['rental_id']; ?>">
                                 <input type="hidden" name="action" value="approve">
                                 <button type="submit" 
+                                        onclick="return confirm('Are you sure you want to approve this rental with the current dates and amount?')"
                                         class="w-full bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg transition duration-200">
                                     Approve
                                 </button>
@@ -280,6 +409,7 @@ if (isset($_POST['action']) && isset($_POST['rental_id'])) {
                                 <input type="hidden" name="rental_id" value="<?php echo $rental['rental_id']; ?>">
                                 <input type="hidden" name="action" value="reject">
                                 <button type="submit" 
+                                        onclick="return confirm('Are you sure you want to reject this rental? This will initiate a refund process.')"
                                         class="w-full bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg transition duration-200">
                                     Reject
                                 </button>
@@ -302,6 +432,52 @@ if (isset($_POST['action']) && isset($_POST['rental_id'])) {
         </div>
     </div>
 
+    <!-- Add this modal at the bottom of the file -->
+    <div id="editModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <h2 class="text-lg font-semibold mb-4">Edit Rental Dates</h2>
+                <form id="editRentalForm" method="POST" action="update_rental.php">
+                    <input type="hidden" name="rental_id" id="edit_rental_id">
+                    <div class="mb-4">
+                        <p class="text-gray-600" id="edit_machine_name"></p>
+                        <p class="text-sm text-gray-500" id="edit_customer_name"></p>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Start Date</label>
+                        <input type="date" name="new_start_date" id="edit_start_date" 
+                               class="w-full px-3 py-2 border rounded-lg" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">End Date</label>
+                        <input type="date" name="new_end_date" id="edit_end_date" 
+                               class="w-full px-3 py-2 border rounded-lg" required>
+                    </div>
+                    <div class="mt-4 flex justify-end space-x-3">
+                        <button type="button" onclick="closeEditModal()" 
+                                class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg">Cancel</button>
+                        <button type="submit" 
+                                class="px-4 py-2 bg-blue-500 text-white rounded-lg">Update</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script src="https://kit.fontawesome.com/your-code.js" crossorigin="anonymous"></script>
+    <script>
+    function openEditModal(rentalData) {
+        document.getElementById('edit_rental_id').value = rentalData.rental_id;
+        document.getElementById('edit_machine_name').textContent = rentalData.machine_name;
+        document.getElementById('edit_customer_name').textContent = `Customer: ${rentalData.customer_name}`;
+        document.getElementById('edit_start_date').value = rentalData.start_date;
+        document.getElementById('edit_end_date').value = rentalData.end_date;
+        document.getElementById('editModal').classList.remove('hidden');
+    }
+
+    function closeEditModal() {
+        document.getElementById('editModal').classList.add('hidden');
+    }
+    </script>
 </body>
 </html> 

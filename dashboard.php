@@ -198,26 +198,136 @@ $rentals = $stmt->get_result();
                     <thead class="bg-gray-50">
                         <tr>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Machine</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Start Date</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">End Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rental Period</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Refund Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
-                        <?php while ($rental = $rentals->fetch_assoc()): ?>
-                        <tr>
-                            <td class="px-6 py-4"><?php echo htmlspecialchars($rental['machine_name']); ?></td>
-                            <td class="px-6 py-4"><?php echo date('M d, Y', strtotime($rental['start_date'])); ?></td>
-                            <td class="px-6 py-4"><?php echo date('M d, Y', strtotime($rental['end_date'])); ?></td>
-                            <td class="px-6 py-4">₹<?php echo number_format($rental['total_amount'], 2); ?></td>
+                        <?php 
+                        // Update the query to include refund information
+                        $rentals_query = "SELECT r.*, 
+                                       m.name as machine_name, 
+                                       m.daily_rate,
+                                       rf.status as refund_status,
+                                       rf.amount as refund_amount,
+                                       ru.new_start_date,
+                                       ru.new_end_date
+                                FROM rentals r 
+                                JOIN machines m ON r.machine_id = m.machine_id 
+                                LEFT JOIN rental_updates ru ON r.rental_id = ru.rental_id
+                                LEFT JOIN refunds rf ON ru.update_id = rf.update_id
+                                WHERE r.user_id = ? 
+                                ORDER BY r.created_at DESC";
+
+                        $stmt = $conn->prepare($rentals_query);
+                        $stmt->bind_param("i", $user_id);
+                        $stmt->execute();
+                        $rentals = $stmt->get_result();
+
+                        while ($rental = $rentals->fetch_assoc()): 
+                        ?>
+                        <tr class="hover:bg-gray-50">
                             <td class="px-6 py-4">
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                    <?php echo $rental['status'] == 'active' ? 'bg-green-100 text-green-800' : 
-                                        ($rental['status'] == 'completed' ? 'bg-blue-100 text-blue-800' : 
-                                        'bg-gray-100 text-gray-800'); ?>">
+                                <div class="font-medium text-gray-900">
+                                    <?php echo htmlspecialchars($rental['machine_name']); ?>
+                                </div>
+                                <div class="text-sm text-gray-500">
+                                    ID: #<?php echo $rental['rental_id']; ?>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="text-sm">
+                                    <?php if ($rental['new_start_date'] && $rental['new_end_date']): ?>
+                                        <div class="line-through text-gray-500">
+                                            <?php echo date('M d, Y', strtotime($rental['start_date'])); ?> - 
+                                            <?php echo date('M d, Y', strtotime($rental['end_date'])); ?>
+                                        </div>
+                                        <div class="text-blue-600 font-medium">
+                                            Updated to:<br>
+                                            <?php echo date('M d, Y', strtotime($rental['new_start_date'])); ?> - 
+                                            <?php echo date('M d, Y', strtotime($rental['new_end_date'])); ?>
+                                        </div>
+                                    <?php else: ?>
+                                        <?php echo date('M d, Y', strtotime($rental['start_date'])); ?> - 
+                                        <?php echo date('M d, Y', strtotime($rental['end_date'])); ?>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="text-sm">
+                                    <div class="font-medium">₹<?php echo number_format($rental['total_amount'], 2); ?></div>
+                                    <?php if ($rental['refund_amount']): ?>
+                                        <div class="text-green-600 text-sm">
+                                            Refund: ₹<?php echo number_format($rental['refund_amount'], 2); ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                    <?php 
+                                    switch($rental['status']) {
+                                        case 'active':
+                                            echo 'bg-green-100 text-green-800';
+                                            break;
+                                        case 'completed':
+                                            echo 'bg-blue-100 text-blue-800';
+                                            break;
+                                        case 'pending':
+                                            echo 'bg-yellow-100 text-yellow-800';
+                                            break;
+                                        case 'cancelled':
+                                            echo 'bg-red-100 text-red-800';
+                                            break;
+                                        default:
+                                            echo 'bg-gray-100 text-gray-800';
+                                    }
+                                    ?>">
                                     <?php echo ucfirst($rental['status']); ?>
                                 </span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <?php if ($rental['refund_status']): ?>
+                                    <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                        <?php 
+                                        switch($rental['refund_status']) {
+                                            case 'processed':
+                                                echo 'bg-green-100 text-green-800';
+                                                break;
+                                            case 'pending':
+                                                echo 'bg-yellow-100 text-yellow-800';
+                                                break;
+                                            case 'failed':
+                                                echo 'bg-red-100 text-red-800';
+                                                break;
+                                        }
+                                        ?>">
+                                        <?php 
+                                        switch($rental['refund_status']) {
+                                            case 'processed':
+                                                echo '✓ Refund Paid';
+                                                break;
+                                            case 'pending':
+                                                echo '⏳ Refund Pending';
+                                                break;
+                                            case 'failed':
+                                                echo '✕ Refund Failed';
+                                                break;
+                                        }
+                                        ?>
+                                    </span>
+                                <?php else: ?>
+                                    <span class="text-gray-500 text-sm">No Refund</span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="px-6 py-4">
+                                <a href="generate_invoice.php?rental_id=<?php echo $rental['rental_id']; ?>" 
+                                   class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                    View Invoice
+                                </a>
                             </td>
                         </tr>
                         <?php endwhile; ?>

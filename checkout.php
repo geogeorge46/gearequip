@@ -54,14 +54,34 @@ $total_in_paise = $grand_total * 100;
 mysqli_data_seek($cart_result, 0);
 
 // Show warning if machines are unavailable
-if (!empty($unavailable_machines)) {
-    echo '<div style="background-color: #fee2e2; color: #b91c1c; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
-        <strong>Warning:</strong> The following machines are no longer available: ' . 
-        implode(', ', $unavailable_machines) . 
-        '. Please remove them from your cart.
-    </div>';
-}
-?>
+if (!empty($unavailable_machines)): ?>
+    <div class="bg-red-50 border-l-4 border-red-500 mx-auto max-w-7xl mt-24 mb-6">
+        <div class="p-4">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-red-800 font-medium">Unavailable Items</h3>
+                    <div class="mt-2 text-red-700">
+                        <p class="text-sm">
+                            The following machines are no longer available:
+                            <span class="font-semibold"><?php echo implode(', ', $unavailable_machines); ?></span>
+                        </p>
+                    </div>
+                    <div class="mt-3">
+                        <a href="remove_unavailable.php" 
+                           class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                            Remove Unavailable Items
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+<?php endif; ?>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -73,9 +93,7 @@ if (!empty($unavailable_machines)) {
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <style>
         .main-container {
-            max-width: 1200px;
-            margin: 120px auto 40px; /* Increased top margin to account for fixed header */
-            padding: 0 20px;
+            margin-top: 2rem !important; /* Reduced from 120px */
         }
         .page-title {
             font-size: 32px;
@@ -89,6 +107,7 @@ if (!empty($unavailable_machines)) {
             padding: 20px;
             margin-bottom: 20px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-top: 1rem;
         }
         .item-image {
             max-width: 150px;
@@ -152,23 +171,15 @@ if (!empty($unavailable_machines)) {
 <body style="background-color: #f3f4f6;">
     <?php include 'nav.php'; ?>
 
-    <div class="main-container">
-        <h1 class="page-title">Checkout</h1>
-
-        <?php if (!empty($unavailable_machines)): ?>
-            <div class="bg-red-100 text-red-700 p-4 rounded-lg mb-6">
-                <strong>Warning:</strong> The following machines are no longer available: 
-                <?php echo implode(', ', $unavailable_machines); ?>. 
-                Please remove them from your cart.
-            </div>
-        <?php endif; ?>
+    <div class="main-container max-w-7xl mx-auto px-4 py-8">
+        <h1 class="text-2xl font-bold text-gray-800 mb-8">Checkout</h1>
 
         <?php while($item = mysqli_fetch_assoc($cart_result)): 
             $rental_days = max(1, (strtotime($item['end_date']) - strtotime($item['start_date'])) / (60 * 60 * 24));
             $item_subtotal = $item['daily_rate'] * $rental_days;
             $item_gst = $item_subtotal * 0.18;
 
-            // Fetch current machine status
+            // Check if machine is available
             $status_query = "SELECT status FROM machines WHERE machine_id = ?";
             $stmt = mysqli_prepare($conn, $status_query);
             mysqli_stmt_bind_param($stmt, "i", $item['machine_id']);
@@ -178,54 +189,64 @@ if (!empty($unavailable_machines)) {
         ?>
             <div class="checkout-item">
                 <div class="item-content">
-                    <div class="image-container">
-                        <img src="<?php echo htmlspecialchars($item['image_url']); ?>" 
-                             alt="<?php echo htmlspecialchars($item['name']); ?>"
-                             class="item-image">
-                    </div>
-                    
-                    <div class="item-details">
-                        <h2 class="item-name"><?php echo htmlspecialchars($item['name']); ?></h2>
-                        
-                        <div class="rental-details">
-                            <h3 style="font-weight: bold; margin-bottom: 10px;">Rental Period</h3>
-                            <p>Start: <?php echo date('d M Y', strtotime($item['start_date'])); ?></p>
-                            <p>End: <?php echo date('d M Y', strtotime($item['end_date'])); ?></p>
-                            <p>Duration: <?php echo $rental_days; ?> days</p>
-                        </div>
-
-                        <div class="cost-details">
-                            <div class="summary-row">
-                                <span>Daily Rate:</span>
-                                <span>₹<?php echo number_format($item['daily_rate'], 2); ?></span>
+                    <div class="flex justify-between items-start">
+                        <div class="flex items-start space-x-4">
+                            <div class="image-container">
+                                <img src="<?php echo htmlspecialchars($item['image_url']); ?>" 
+                                     alt="<?php echo htmlspecialchars($item['name']); ?>"
+                                     class="w-24 h-24 object-cover rounded-lg">
                             </div>
-                            <div class="summary-row">
-                                <span>Rental Cost (<?php echo $rental_days; ?> days):</span>
-                                <span>₹<?php echo number_format($item_subtotal, 2); ?></span>
-                            </div>
-                            <div class="summary-row">
-                                <span>GST (18%):</span>
-                                <span>₹<?php echo number_format($item_gst, 2); ?></span>
-                            </div>
-                            <div class="summary-row">
-                                <span>Security Deposit:</span>
-                                <span>₹<?php echo number_format($item['security_deposit'], 2); ?></span>
+                            
+                            <div class="item-details">
+                                <h2 class="text-xl font-bold"><?php echo htmlspecialchars($item['name']); ?></h2>
+                                
+                                <div class="rental-details mt-2">
+                                    <p>Start: <?php echo date('d M Y', strtotime($item['start_date'])); ?></p>
+                                    <p>End: <?php echo date('d M Y', strtotime($item['end_date'])); ?></p>
+                                    <p>Duration: <?php echo $rental_days; ?> days</p>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Status Button -->
-                        <button class="status-button" style="
-                            background-color: <?php echo $machine_status == 'available' ? '#10b981' : ($machine_status == 'rented' ? '#ef4444' : '#f59e0b'); ?>;
-                            color: white;
-                            padding: 5px 10px;
-                            border: none;
-                            border-radius: 4px;
-                            cursor: default;
-                            margin-top: 10px;
-                        ">
-                            <?php echo ucfirst($machine_status); ?>
+                        <?php if ($machine_status == 'rented'): ?>
+                        <button onclick="removeFromCart(<?php echo $item['machine_id']; ?>)" 
+                                class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors">
+                            Remove
                         </button>
+                        <?php endif; ?>
                     </div>
+
+                    <div class="cost-details mt-4">
+                        <div class="summary-row">
+                            <span>Daily Rate:</span>
+                            <span>₹<?php echo number_format($item['daily_rate'], 2); ?></span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Rental Cost (<?php echo $rental_days; ?> days):</span>
+                            <span>₹<?php echo number_format($item_subtotal, 2); ?></span>
+                        </div>
+                        <div class="summary-row">
+                            <span>GST (18%):</span>
+                            <span>₹<?php echo number_format($item_gst, 2); ?></span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Security Deposit:</span>
+                            <span>₹<?php echo number_format($item['security_deposit'], 2); ?></span>
+                        </div>
+                    </div>
+
+                    <!-- Status Button -->
+                    <button class="status-button" style="
+                        background-color: <?php echo $machine_status == 'available' ? '#10b981' : ($machine_status == 'rented' ? '#ef4444' : '#f59e0b'); ?>;
+                        color: white;
+                        padding: 5px 10px;
+                        border: none;
+                        border-radius: 4px;
+                        cursor: default;
+                        margin-top: 10px;
+                    ">
+                        <?php echo ucfirst($machine_status); ?>
+                    </button>
                 </div>
             </div>
         <?php endwhile; ?>
@@ -304,6 +325,30 @@ if (!empty($unavailable_machines)) {
         .catch(error => {
             console.error('Verification error:', error);
             alert('Payment verification failed. Please try again.');
+        });
+    }
+
+    function removeFromCart(machineId) {
+        fetch('remove_from_cart.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                machine_id: machineId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert('Error removing item: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error removing item. Please try again.');
         });
     }
     </script>

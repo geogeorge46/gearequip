@@ -464,21 +464,43 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     <script>
     $(document).ready(function() {
-        $('#category_id').change(function() {
+        $('#category_id').on('change', function() {
             var category_id = $(this).val();
             
-            if(category_id != '') {
+            if(category_id) {
                 $.ajax({
                     url: 'get_subcategories.php',
-                    method: 'POST',
-                    data: {category_id: category_id},
+                    method: 'GET',
+                    data: { category_id: category_id },
+                    dataType: 'json',
                     success: function(data) {
-                        $('#subcategory_id').html(data);
-                        console.log('Received data:', data); // Debug log
+                        console.log('Received data:', data);
+                        
+                        var subcategorySelect = $('#subcategory_id');
+                        subcategorySelect.empty();
+                        subcategorySelect.append('<option value="">Select Subcategory</option>');
+                        
+                        data.forEach(function(subcategory) {
+                            subcategorySelect.append(
+                                $('<option></option>')
+                                    .val(subcategory.subcategory_id)
+                                    .text(subcategory.subcategory_name)
+                            );
+                        });
+                        
+                        subcategorySelect.prop('disabled', false);
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('AJAX Error:', error);
+                        $('#subcategory_id')
+                            .html('<option value="">Error loading subcategories</option>')
+                            .prop('disabled', true);
                     }
                 });
             } else {
-                $('#subcategory_id').html('<option value="">Select Subcategory</option>');
+                $('#subcategory_id')
+                    .html('<option value="">Select Subcategory</option>')
+                    .prop('disabled', true);
             }
         });
     });
