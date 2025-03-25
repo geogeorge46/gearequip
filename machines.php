@@ -19,8 +19,8 @@ $nav_info = mysqli_fetch_assoc($nav_result);
 
 // Check if subcategory exists
 if (!$nav_info) {
-    // Redirect to categories page if subcategory not found
-    $_SESSION['error'] = "Subcategory not found.";
+    // Handle missing subcategory more gracefully
+    // Just redirect without setting an error message
     header('Location: user_categories.php');
     exit();
 }

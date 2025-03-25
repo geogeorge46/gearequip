@@ -138,6 +138,12 @@ $subcategories_result = mysqli_stmt_get_result($stmt);
         <?php endif; ?>
     </div>
 
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add any additional JavaScript functionality for the subcategories page here
+    });
+    </script>
+
     <?php include 'footer.php'; ?>
 </body>
 </html>

@@ -54,10 +54,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
     }
 }
-
-// Get all categories for the dropdown
-$categories_query = "SELECT * FROM categories ORDER BY category_name";
-$categories_result = mysqli_query($conn, $categories_query);
 ?>
 
 <!DOCTYPE html>
@@ -71,6 +67,23 @@ $categories_result = mysqli_query($conn, $categories_query);
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Subcategory loading
+        $('#category_id').change(function() {
+            var category_id = $(this).val();
+            if(category_id) {
+                $.ajax({
+                    url: 'get_subcategories.php',
+                    type: 'POST',
+                    data: {category_id: category_id},
+                    success: function(response) {
+                        $('#subcategory_id').html(response);
+                    }
+                });
+            } else {
+                $('#subcategory_id').html('<option value="">Select Subcategory</option>');
+            }
+        });
+
         // Machine Name Validation
         const nameInput = document.querySelector('input[name="name"]');
         const nameError = document.createElement('span');
@@ -254,158 +267,154 @@ $categories_result = mysqli_query($conn, $categories_query);
     });
     </script>
 </head>
-<body class="bg-gray-100 font-sans">
+<body class="bg-gray-100">
     <div class="container mx-auto px-4 py-8">
-        <a href="index.php" class="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg mb-6">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clip-rule="evenodd" />
-            </svg>
-            Back to Store
-        </a>
+        <!-- Back Button -->
+        <div class="mb-6">
+            <a href="managerstore.php" class="inline-flex items-center text-blue-600 hover:text-blue-800">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                </svg>
+                Back to Store
+            </a>
+        </div>
 
         <!-- Add Machine Form -->
-        <div class="bg-white rounded-lg shadow mb-8">
-            <div class="p-6 border-b">
-                <h1 class="text-2xl font-semibold">Add New Machine</h1>
-            </div>
-            <div class="p-6">
+        <div class="bg-white rounded-lg shadow p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4">Add New Machine</h2>
+            <form method="POST" action="" enctype="multipart/form-data">
                 <?php if(isset($error_message)): ?>
-                    <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6">
-                        <?php echo $error_message; ?>
+                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+                        <span class="block sm:inline"><?php echo $error_message; ?></span>
                     </div>
                 <?php endif; ?>
-                
+
                 <?php if(isset($success_message)): ?>
-                    <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6">
-                        <?php echo $success_message; ?>
+                    <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
+                        <span class="block sm:inline"><?php echo $success_message; ?></span>
                     </div>
                 <?php endif; ?>
 
-                <form method="POST" enctype="multipart/form-data" id="addMachineForm">
-                    <div class="grid grid-cols-2 gap-6">
-                        <div>
-                            <label for="category_id" class="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                            <select name="category_id" id="category_id" required 
-                                   aria-label="Category"
-                                   class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <option value="">Select Category</option>
-                                <?php while($category = mysqli_fetch_assoc($categories_result)): ?>
-                                    <option value="<?php echo $category['category_id']; ?>">
-                                        <?php echo htmlspecialchars($category['category_name']); ?>
-                                    </option>
-                                <?php endwhile; ?>
-                            </select>
-                        </div>
-                        <div>
-                            <label for="subcategory_id" class="block text-sm font-medium text-gray-700 mb-2">Subcategory</label>
-                            <select name="subcategory_id" id="subcategory_id" required 
-                                   aria-label="Subcategory"
-                                   class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <option value="">Select Category First</option>
-                            </select>
-                        </div>
+                <div class="grid grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                        <select name="category_id" id="category_id" required class="w-full px-3 py-2 border rounded-lg">
+                            <option value="">Select Category</option>
+                            <?php
+                            $category_query = "SELECT * FROM categories ORDER BY category_name";
+                            $category_result = mysqli_query($conn, $category_query);
+                            while($category = mysqli_fetch_assoc($category_result)) {
+                                echo "<option value='" . $category['category_id'] . "'>" . 
+                                     htmlspecialchars($category['category_name']) . "</option>";
+                            }
+                            ?>
+                        </select>
                     </div>
-
-                    <div class="grid grid-cols-2 gap-6 mt-4">
-                        <div>
-                            <label for="name" class="block text-sm font-medium text-gray-700 mb-2">Machine Name</label>
-                            <input type="text" id="name" name="name" required 
-                                   aria-label="Machine Name"
-                                   class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div>
-                            <label for="model_number" class="block text-sm font-medium text-gray-700 mb-2">Model Number</label>
-                            <input type="text" id="model_number" name="model_number" required 
-                                   aria-label="Model Number"
-                                   class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Subcategory</label>
+                        <select name="subcategory_id" id="subcategory_id" required class="w-full px-3 py-2 border rounded-lg">
+                            <option value="">Select Subcategory</option>
+                        </select>
                     </div>
+                </div>
 
-                    <div class="grid grid-cols-2 gap-6 mt-4">
-                        <div>
-                            <label for="daily_rate" class="block text-sm font-medium text-gray-700 mb-2">Daily Rate (₹)</label>
-                            <input type="number" id="daily_rate" name="daily_rate" required step="0.01" min="10" max="10000"
-                                   aria-label="Daily Rate"
-                                   class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div>
-                            <label for="security_deposit" class="block text-sm font-medium text-gray-700 mb-2">Security Deposit (₹)</label>
-                            <input type="number" id="security_deposit" name="security_deposit" required step="0.01" min="0"
-                                   aria-label="Security Deposit"
-                                   class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-6 mt-4">
-                        <div>
-                            <label for="manufacturer" class="block text-sm font-medium text-gray-700 mb-2">Manufacturer</label>
-                            <input type="text" id="manufacturer" name="manufacturer" required 
-                                   aria-label="Manufacturer"
-                                   class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div>
-                            <label for="manufacturing_year" class="block text-sm font-medium text-gray-700 mb-2">Manufacturing Year</label>
-                            <input type="number" id="manufacturing_year" name="manufacturing_year" required 
-                                   min="1900" max="<?php echo date('Y'); ?>"
-                                   aria-label="Manufacturing Year"
-                                   class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-6 mt-4">
-                        <div>
-                            <label for="purchase_date" class="block text-sm font-medium text-gray-700 mb-2">Purchase Date</label>
-                            <input type="date" id="purchase_date" name="purchase_date" required 
-                                   max="<?php echo date('Y-m-d'); ?>"
-                                   aria-label="Purchase Date"
-                                   class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div>
-                            <label for="purchase_price" class="block text-sm font-medium text-gray-700 mb-2">Purchase Price (₹)</label>
-                            <input type="number" id="purchase_price" name="purchase_price" required step="0.01" min="0"
-                                   aria-label="Purchase Price"
-                                   class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-6 mt-4">
-                        <div>
-                            <label for="maintenance_interval" class="block text-sm font-medium text-gray-700 mb-2">Maintenance Interval (Days)</label>
-                            <input type="number" id="maintenance_interval" name="maintenance_interval" required min="1"
-                                   aria-label="Maintenance Interval"
-                                   class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div>
-                            <label for="next_maintenance_date" class="block text-sm font-medium text-gray-700 mb-2">Next Maintenance Date</label>
-                            <input type="date" id="next_maintenance_date" name="next_maintenance_date" required 
-                                   min="<?php echo date('Y-m-d'); ?>"
-                                   aria-label="Next Maintenance Date"
-                                   class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                    </div>
-
-                    <div class="mt-4">
-                        <label for="description" class="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                        <textarea id="description" name="description" rows="3" required 
-                                  aria-label="Description"
-                                  class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
-                    </div>
-
-                    <div class="mt-4">
-                        <label for="image_url" class="block text-sm font-medium text-gray-700 mb-2">Machine Image</label>
-                        <input type="file" id="image_url" name="image_url" accept="image/*" required 
-                               aria-label="Machine Image"
+                <div class="grid grid-cols-2 gap-6 mt-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Machine Name</label>
+                        <input type="text" 
+                               name="name" 
+                               required 
+                               pattern="^[a-zA-Z][a-zA-Z0-9\s-]*$"
+                               title="Must start with a letter and can contain only letters, numbers, spaces and hyphens"
                                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
-
-                    <div class="mt-6">
-                        <button type="submit" 
-                                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            Add Machine
-                        </button>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Model Number</label>
+                        <input type="text" name="model_number" required 
+                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
-                </form>
-            </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-6 mt-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Daily Rate (₹)</label>
+                        <input type="number" 
+                               name="daily_rate" 
+                               required 
+                               min="10" 
+                               max="10000" 
+                               step="0.01"
+                               title="Daily rate must be between ₹10 and ₹10000"
+                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Security Deposit (₹)</label>
+                        <input type="number" name="security_deposit" required step="0.01" 
+                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-6 mt-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Manufacturer</label>
+                        <input type="text" name="manufacturer" required 
+                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Manufacturing Year</label>
+                        <input type="number" name="manufacturing_year" required 
+                               min="1900" max="<?php echo date('Y'); ?>"
+                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-6 mt-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Purchase Date</label>
+                        <input type="date" name="purchase_date" required 
+                               max="<?php echo date('Y-m-d'); ?>"
+                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Purchase Price (₹)</label>
+                        <input type="number" name="purchase_price" required step="0.01"
+                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-6 mt-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Maintenance Interval (Days)</label>
+                        <input type="number" name="maintenance_interval" required min="1"
+                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Next Maintenance Date</label>
+                        <input type="date" name="next_maintenance_date" required 
+                               min="<?php echo date('Y-m-d'); ?>"
+                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                    <textarea name="description" rows="3" required 
+                              class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                </div>
+
+                <div class="mt-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Machine Image</label>
+                    <input type="file" name="image_url" accept="image/*" required 
+                           class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div class="mt-6">
+                    <button type="submit" 
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        Add Machine
+                    </button>
+                </div>
+            </form>
         </div>
 
         <!-- Machines List -->
@@ -413,7 +422,7 @@ $categories_result = mysqli_query($conn, $categories_query);
             <div class="p-6 border-b">
                 <h2 class="text-xl font-semibold">All Machines</h2>
             </div>
-            <div class="p-6 overflow-x-auto">
+            <div class="p-6">
                 <table class="w-full">
                     <thead>
                         <tr class="text-left border-b">
@@ -433,22 +442,18 @@ $categories_result = mysqli_query($conn, $categories_query);
                                   ORDER BY m.name";
                         $result = mysqli_query($conn, $query);
                         
-                        if (mysqli_num_rows($result) > 0) {
-                            while($row = mysqli_fetch_assoc($result)) {
-                                echo '<tr class="border-b">';
-                                echo '<td class="py-4">' . htmlspecialchars($row['name']) . '</td>';
-                                echo '<td class="py-4">' . htmlspecialchars($row['category_name'] ?? 'N/A') . 
-                                     ' / ' . htmlspecialchars($row['subcategory_name'] ?? 'N/A') . '</td>';
-                                echo '<td class="py-4">₹' . htmlspecialchars($row['daily_rate']) . '</td>';
-                                echo '<td class="py-4">' . htmlspecialchars($row['status']) . '</td>';
-                                echo '<td class="py-4">';
-                                echo '<a href="edit_machine.php?id=' . $row['machine_id'] . '" 
-                                        class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">Edit</a>';
-                                echo '</td>';
-                                echo '</tr>';
-                            }
-                        } else {
-                            echo '<tr><td colspan="5" class="py-4 text-center">No machines found</td></tr>';
+                        while($row = mysqli_fetch_assoc($result)) {
+                            echo '<tr class="border-b">';
+                            echo '<td class="py-4">' . htmlspecialchars($row['name']) . '</td>';
+                            echo '<td class="py-4">' . htmlspecialchars($row['category_name']) . 
+                                 ' / ' . htmlspecialchars($row['subcategory_name']) . '</td>';
+                            echo '<td class="py-4">₹' . htmlspecialchars($row['daily_rate']) . '</td>';
+                            echo '<td class="py-4">' . htmlspecialchars($row['status']) . '</td>';
+                            echo '<td class="py-4">';
+                            echo '<a href="edit_machine.php?id=' . $row['machine_id'] . '" 
+                                    class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">Edit</a>';
+                            echo '</td>';
+                            echo '</tr>';
                         }
                         ?>
                     </tbody>
@@ -459,62 +464,23 @@ $categories_result = mysqli_query($conn, $categories_query);
 
     <script>
     $(document).ready(function() {
-        // Function to load subcategories
-        function loadSubcategories(categoryId) {
-            console.log('Loading subcategories for category ID:', categoryId);
-            
-            if (!categoryId) {
-                $('#subcategory_id').html('<option value="">Select Category First</option>');
-                return;
-            }
-            
-            // Show loading indicator
-            $('#subcategory_id').html('<option value="">Loading...</option>');
-            
-            $.ajax({
-                url: 'get_subcategories.php',
-                type: 'GET',
-                data: { category_id: categoryId },
-                dataType: 'json',
-                cache: false,
-                success: function(response) {
-                    console.log('AJAX Success. Response:', response);
-                    
-                    if (response.status === 'success') {
-                        var options = '<option value="">Select Subcategory</option>';
-                        $.each(response.subcategories, function(index, subcategory) {
-                            options += '<option value="' + subcategory.id + '">' + 
-                                       subcategory.name + '</option>';
-                        });
-                        $('#subcategory_id').html(options);
-                    } else if (response.status === 'empty') {
-                        $('#subcategory_id').html('<option value="">No subcategories available</option>');
-                    } else {
-                        $('#subcategory_id').html('<option value="">Error: ' + response.message + '</option>');
-                        console.error('Error loading subcategories:', response.message);
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('AJAX Error:', status, error);
-                    console.error('Response Text:', xhr.responseText);
-                    $('#subcategory_id').html('<option value="">Error loading subcategories</option>');
-                }
-            });
-        }
-        
-        // Bind change event to category dropdown
         $('#category_id').change(function() {
-            var categoryId = $(this).val();
-            console.log('Category changed to:', categoryId);
-            loadSubcategories(categoryId);
+            var category_id = $(this).val();
+            
+            if(category_id != '') {
+                $.ajax({
+                    url: 'get_subcategories.php',
+                    method: 'POST',
+                    data: {category_id: category_id},
+                    success: function(data) {
+                        $('#subcategory_id').html(data);
+                        console.log('Received data:', data); // Debug log
+                    }
+                });
+            } else {
+                $('#subcategory_id').html('<option value="">Select Subcategory</option>');
+            }
         });
-        
-        // If category is pre-selected, load subcategories
-        var initialCategoryId = $('#category_id').val();
-        if (initialCategoryId) {
-            console.log('Initial category ID:', initialCategoryId);
-            loadSubcategories(initialCategoryId);
-        }
     });
     </script>
 </body>

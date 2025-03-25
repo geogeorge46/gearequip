@@ -8,12 +8,24 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'manager') {
     exit();
 }
 
-// Only query the categories table since we know it exists
+// Query counts for all tables
 try {
+    // Categories count
     $result = mysqli_query($conn, "SELECT COUNT(*) as count FROM categories");
     $categoryCount = mysqli_fetch_assoc($result)['count'];
+
+    // Subcategories count
+    $result = mysqli_query($conn, "SELECT COUNT(*) as count FROM subcategories");
+    $subcategoryCount = mysqli_fetch_assoc($result)['count'];
+
+    // Machines count
+    $result = mysqli_query($conn, "SELECT COUNT(*) as count FROM machines");
+    $machineCount = mysqli_fetch_assoc($result)['count'];
 } catch (mysqli_sql_exception $e) {
-    $categoryCount = 0; // Default value if query fails
+    // Default values if queries fail
+    $categoryCount = 0;
+    $subcategoryCount = 0;
+    $machineCount = 0;
 }
 ?>
 
@@ -135,10 +147,29 @@ try {
         <!-- Quick Stats -->
         <div class="bg-white rounded-lg shadow p-6">
             <h2 class="text-xl font-semibold text-gray-800 mb-4">Quick Statistics</h2>
-            <div class="grid grid-cols-1 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="p-4 border rounded-lg">
-                    <p class="text-sm text-gray-500">Total Categories</p>
+                    <div class="flex items-center justify-between mb-2">
+                        <p class="text-sm text-gray-500">Total Categories</p>
+                        <i class="fas fa-tags text-blue-500"></i>
+                    </div>
                     <p class="text-2xl font-bold text-gray-800"><?php echo $categoryCount; ?></p>
+                </div>
+                
+                <div class="p-4 border rounded-lg">
+                    <div class="flex items-center justify-between mb-2">
+                        <p class="text-sm text-gray-500">Total Subcategories</p>
+                        <i class="fas fa-sitemap text-green-500"></i>
+                    </div>
+                    <p class="text-2xl font-bold text-gray-800"><?php echo $subcategoryCount; ?></p>
+                </div>
+                
+                <div class="p-4 border rounded-lg">
+                    <div class="flex items-center justify-between mb-2">
+                        <p class="text-sm text-gray-500">Total Machines</p>
+                        <i class="fas fa-box text-purple-500"></i>
+                    </div>
+                    <p class="text-2xl font-bold text-gray-800"><?php echo $machineCount; ?></p>
                 </div>
             </div>
         </div>

@@ -1,39 +1,9 @@
 <?php
-// Enable error reporting
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
 include 'config.php';
 session_start();
 
-// Clear any existing "Subcategory not found" error
-if (isset($_SESSION['error']) && $_SESSION['error'] == "Subcategory not found.") {
-    unset($_SESSION['error']);
-}
-
-// Debug incoming request
-echo "<!-- DEBUG REQUEST: ";
-echo "GET: " . print_r($_GET, true);
-echo "POST: " . print_r($_POST, true);
-echo " -->";
-
-// Check if there's a JSON response being sent
-$input = file_get_contents('php://input');
-if (!empty($input)) {
-    echo "<!-- Raw input: " . $input . " -->";
-}
-
 // Add this at the beginning of cart.php to handle the add action
-if (isset($_GET['action']) && $_GET['action'] === 'add') {
-    if (!isset($_GET['machine'])) {
-        // This is where the error message is set
-        echo "<!-- ERROR: No machine specified in add action -->";
-        $_SESSION['error'] = "No machine specified";
-        header('Location: machines.php');
-        exit();
-    }
-    
+if (isset($_GET['action']) && $_GET['action'] === 'add' && isset($_GET['machine'])) {
     $machine_id = (int)$_GET['machine'];
     $user_id = $_SESSION['user_id'];
 

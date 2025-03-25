@@ -45,11 +45,14 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'manager') {
                 <a href="managerstore.php" class="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
                     <i class="fas fa-store mr-3"></i>Store
                 </a>
-                <a href="store_machines.php" class="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
+                <a href="manager_availablemachines.php" class="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
                     <i class="fas fa-cogs mr-3"></i>Available Machines
                 </a>
-                <a href="manage_rates.php" class="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
-                    <i class="fas fa-dollar-sign mr-3"></i>Manage Rates
+                <a href="rented_machines.php" class="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
+                    <i class="fas fa-truck-loading mr-3"></i>Rented Machines
+                </a>
+                <a href="manager_reports.php" class="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
+                    <i class="fas fa-chart-bar mr-3"></i>Reports
                 </a>
                 <a href="manager_reviewed.php" class="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
                     <i class="fas fa-star mr-3"></i>Review Management
@@ -57,8 +60,10 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'manager') {
                 <a href="manager_approvals.php" class="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
                     <i class="fas fa-check-circle mr-3"></i>Rental Approvals
                 </a>
-                <a href="profile_settings.php" class="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
+                <a href="manager_profile.php" class="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
                     <i class="fas fa-user-cog mr-3"></i>Profile Settings
+                </a>
+            </div>
                 </a>
             </div>
         </nav>
@@ -163,10 +168,9 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'manager') {
                 <h2 class="text-xl font-semibold text-gray-800">Recent Activity</h2>
             </div>
             <div class="p-6">
-                <!-- Add your recent activity content here -->
                 <div class="space-y-4">
                     <?php
-                    // Fetch recent rentals
+                    // Fetch recent rentals with more details
                     $query = "SELECT r.*, u.full_name, m.name as machine_name 
                              FROM rentals r 
                              JOIN users u ON r.user_id = u.user_id 
@@ -174,12 +178,28 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'manager') {
                              ORDER BY r.created_at DESC LIMIT 5";
                     $result = mysqli_query($conn, $query);
                     while($row = mysqli_fetch_assoc($result)) {
-                        echo '<div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">';
-                        echo '<div>';
+                        echo '<div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">';
+                        echo '<div class="flex-grow">';
                         echo '<p class="font-semibold">' . htmlspecialchars($row['full_name']) . '</p>';
                         echo '<p class="text-sm text-gray-600">Rented ' . htmlspecialchars($row['machine_name']) . '</p>';
+                        echo '<p class="text-xs text-gray-500">' . date('M d, Y', strtotime($row['created_at'])) . '</p>';
                         echo '</div>';
-                        echo '<span class="text-sm text-gray-500">' . date('M d, Y', strtotime($row['created_at'])) . '</span>';
+                        echo '<div class="flex items-center space-x-3">';
+                        echo '<span class="px-2 py-1 text-xs rounded-full ' . 
+                             ($row['status'] === 'active' ? 'bg-green-100 text-green-800' : 
+                             ($row['status'] === 'completed' ? 'bg-blue-100 text-blue-800' : 
+                             'bg-gray-100 text-gray-800')) . '">' . 
+                             ucfirst($row['status']) . '</span>';
+                        echo '<a href="generate_invoice.php?rental_id=' . $row['rental_id'] . '" 
+                                class="inline-flex items-center px-3 py-1 text-sm text-blue-600 hover:text-blue-800 
+                                       border border-blue-600 rounded hover:bg-blue-50 transition-colors">';
+                        echo '<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">';
+                        echo '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                   d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />';
+                        echo '</svg>';
+                        echo 'View Invoice';
+                        echo '</a>';
+                        echo '</div>';
                         echo '</div>';
                     }
                     ?>

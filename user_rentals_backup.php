@@ -11,9 +11,7 @@ if (!isset($_SESSION['user_id'])) {
 // Get user's rental history
 $user_id = $_SESSION['user_id'];
 $rentals_query = "SELECT r.rental_id, r.machine_id, r.user_id, r.start_date, r.end_date, 
-                  r.rental_days, r.total_amount, r.security_deposit, r.security_deposit_status,
-                  r.status, r.payment_status, r.created_at, r.updated_at, r.refund_amount,
-                  r.refund_status, r.rejection_reason, r.temp_start_date,
+                  r.total_amount, r.status, r.payment_status, r.created_at, 
                   m.name as machine_name, m.image_url 
                   FROM rentals r 
                   JOIN machines m ON r.machine_id = m.machine_id 
