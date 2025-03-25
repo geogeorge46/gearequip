@@ -194,24 +194,23 @@ if (isset($_POST['action']) && isset($_POST['rental_id'])) {
         <!-- Approval Cards Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <?php
-            // Get pending rentals with more details
-            $query = "SELECT r.*, m.name as machine_name, m.image_url, m.daily_rate, 
-                      u.full_name, u.email, u.phone,
-                      DATEDIFF(r.end_date, r.start_date) as rental_days,
-                      ru.new_start_date as current_start_date, 
-                      ru.new_end_date as current_end_date,
-                      ru.new_amount as current_total_amount,
-                      CASE 
-                          WHEN ru.id IS NOT NULL THEN DATEDIFF(ru.new_end_date, ru.new_start_date)
-                          ELSE DATEDIFF(r.end_date, r.start_date)
-                      END as current_days,
-                      ru.status as update_status
-                      FROM rentals r 
-                      JOIN machines m ON r.machine_id = m.machine_id 
-                      JOIN users u ON r.user_id = u.user_id
-                      LEFT JOIN rental_updates ru ON r.rental_id = ru.rental_id AND ru.status = 'approved'
-                      WHERE r.status = 'pending' AND r.payment_status = 'paid'
-                      ORDER BY r.created_at DESC";
+            // Modify the rental query to use the correct columns
+            $query = "SELECT r.*, 
+                     u.full_name, u.email,
+                     m.name as machine_name, m.daily_rate,
+                     m.image_url,
+                     COALESCE(ru.new_start_date, r.start_date) as current_start_date,
+                     COALESCE(ru.new_end_date, r.end_date) as current_end_date,
+                     COALESCE(r.total_amount - IFNULL(rf.amount, 0), r.total_amount) as current_total_amount
+              FROM rentals r 
+              JOIN users u ON r.user_id = u.user_id 
+              JOIN machines m ON r.machine_id = m.machine_id 
+              LEFT JOIN rental_updates ru ON r.rental_id = ru.rental_id 
+              LEFT JOIN refunds rf ON ru.update_id = rf.update_id 
+                AND rf.status = 'processed'
+              WHERE r.status = 'pending' 
+              AND r.payment_status = 'paid' 
+              ORDER BY r.created_at DESC";
             
             $result = mysqli_query($conn, $query);
             

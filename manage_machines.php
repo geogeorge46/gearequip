@@ -459,62 +459,45 @@ $categories_result = mysqli_query($conn, $categories_query);
 
     <script>
     $(document).ready(function() {
-        // Function to load subcategories
-        function loadSubcategories(categoryId) {
-            console.log('Loading subcategories for category ID:', categoryId);
+        $('#category_id').on('change', function() {
+            var category_id = $(this).val();
             
-            if (!categoryId) {
-                $('#subcategory_id').html('<option value="">Select Category First</option>');
-                return;
-            }
-            
-            // Show loading indicator
-            $('#subcategory_id').html('<option value="">Loading...</option>');
-            
-            $.ajax({
-                url: 'get_subcategories.php',
-                type: 'GET',
-                data: { category_id: categoryId },
-                dataType: 'json',
-                cache: false,
-                success: function(response) {
-                    console.log('AJAX Success. Response:', response);
-                    
-                    if (response.status === 'success') {
-                        var options = '<option value="">Select Subcategory</option>';
-                        $.each(response.subcategories, function(index, subcategory) {
-                            options += '<option value="' + subcategory.id + '">' + 
-                                       subcategory.name + '</option>';
+            if(category_id) {
+                $.ajax({
+                    url: 'get_subcategories.php',
+                    method: 'GET',
+                    data: { category_id: category_id },
+                    dataType: 'json',
+                    success: function(data) {
+                        console.log('Received data:', data);
+                        
+                        var subcategorySelect = $('#subcategory_id');
+                        subcategorySelect.empty();
+                        subcategorySelect.append('<option value="">Select Subcategory</option>');
+                        
+                        data.forEach(function(subcategory) {
+                            subcategorySelect.append(
+                                $('<option></option>')
+                                    .val(subcategory.subcategory_id)
+                                    .text(subcategory.subcategory_name)
+                            );
                         });
-                        $('#subcategory_id').html(options);
-                    } else if (response.status === 'empty') {
-                        $('#subcategory_id').html('<option value="">No subcategories available</option>');
-                    } else {
-                        $('#subcategory_id').html('<option value="">Error: ' + response.message + '</option>');
-                        console.error('Error loading subcategories:', response.message);
+                        
+                        subcategorySelect.prop('disabled', false);
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('AJAX Error:', error);
+                        $('#subcategory_id')
+                            .html('<option value="">Error loading subcategories</option>')
+                            .prop('disabled', true);
                     }
-                },
-                error: function(xhr, status, error) {
-                    console.error('AJAX Error:', status, error);
-                    console.error('Response Text:', xhr.responseText);
-                    $('#subcategory_id').html('<option value="">Error loading subcategories</option>');
-                }
-            });
-        }
-        
-        // Bind change event to category dropdown
-        $('#category_id').change(function() {
-            var categoryId = $(this).val();
-            console.log('Category changed to:', categoryId);
-            loadSubcategories(categoryId);
+                });
+            } else {
+                $('#subcategory_id')
+                    .html('<option value="">Select Subcategory</option>')
+                    .prop('disabled', true);
+            }
         });
-        
-        // If category is pre-selected, load subcategories
-        var initialCategoryId = $('#category_id').val();
-        if (initialCategoryId) {
-            console.log('Initial category ID:', initialCategoryId);
-            loadSubcategories(initialCategoryId);
-        }
     });
     </script>
 </body>

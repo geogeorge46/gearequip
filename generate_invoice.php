@@ -52,14 +52,6 @@ $stmt->bind_param("i", $rental_id);
 $stmt->execute();
 $refunds = $stmt->get_result();
 
-$total_refunded = 0;
-if ($refunds->num_rows > 0) {
-    while ($refund = $refunds->fetch_assoc()) {
-        $total_refunded += $refund['amount'];
-    }
-    $refunds->data_seek(0);
-}
-
 ?>
 
 <!DOCTYPE html>
